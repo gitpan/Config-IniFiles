@@ -1,8 +1,6 @@
 NAME
     Config::IniFiles - A module for reading .ini-style configuration files.
 
-         $Header: /cvsroot/config-inifiles/config-inifiles/README,v 1.3 2000/12/18 17:53:05 rbowen Exp $
-
 SYNOPSIS
       use Config::IniFiles;
       my $cfg = new Config::IniFiles( -file => "/path/configfile.ini" );
@@ -452,11 +450,17 @@ AUTHOR and ACKNOWLEDGEMENTS
 
 Change log
          $Log: README,v $
-         Revision 1.3  2000/12/18 17:53:05  rbowen
-         Update readme to reflect latest release
+         Revision 1.5  2001/01/08 18:26:04  rbowen
+         2.14 change log
+
+         Revision 2.14  2001/01/08 18:02:32  wadg
+         [Bug #127325] Fixed proken import; changelog; moved
 
          Revision 2.13  2000/12/18 07:14:41  wadg
          [Bugs# 122441,122437] Alien EOLs and OO delete method
+
+         Revision 2.12  2000/12/18 04:59:37  wadg
+         [Bug #125524] Writing multiline of 2 with tied hash
 
          Revision 2.11  2000/12/16 12:53:13  grail
          [BUG #122455] Problem with File Permissions
