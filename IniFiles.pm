@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = 0.09;
+$Config::IniFiles::VERSION = 0.11;
 use Carp;
 use strict;
 require 5.004;
@@ -117,9 +117,10 @@ sub newval {
 
   push(@{$self->{sects}}, $sect) unless (grep /^$sect$/, @{$self->{sects}});
   $self->{v}{$sect} = {} unless ref $self->{v}{$sect} eq 'HASH';
-  unless (defined($self->{v}{$sect}{$parm})) {
-    push(@{$self->{parms}{$sect}}, $parm);
-  }
+
+  push(@{$self->{parms}{$sect}}, $parm) 
+    unless (grep /^$parm$/,@{$self->{parms}{$sect}} );
+
   if (@val > 1) {
     $self->{v}{$sect}{$parm} = \@val;
 	$self->{EOT}{$sect}{$parm} = 'EOT' unless defined
@@ -180,7 +181,10 @@ sub ReadConfig {
 
   $self->{firstload} = 0;
 
-  open(CF, $self->{cf}) || carp "open $self->{cf}: $!";
+  if (!open(CF, $self->{cf})) {
+    carp "Failed to open $self->{cf}: $!";
+    return undef;
+  }
   local $_;
   while (<CF>) {
     chomp;
@@ -281,13 +285,15 @@ sub Parameters {
 
 sub Groups	{
   my $self = shift;
-  keys %{$self->{group}} || ();
+  return keys %{$self->{group}} if ref $self->{group} eq 'HASH';
+  return ();
 }
 
 sub GroupMembers {
   my $self  = shift;
   my $group = shift;
-  @{$self->{group}{$group}} || ();
+  return @{$self->{group}{$group}} if ref $self->{group}{$group} eq 'ARRAY';
+  return ();
 }
 
 sub WriteConfig {
@@ -648,9 +654,7 @@ sub STORE {
   my @val = @_;
 
   # Add the parameter the the parent's list if it isn't there yet
-  unless( defined $self->{v}{$key} ) {
-    push(@{$self->{parms}}, $key);
-  }
+  push(@{$self->{parms}}, $key) unless (grep /^$key$/, @{$self->{parms}});
 
   if (@val > 1) {
     $self->{v}{$key} = \@val;
@@ -934,7 +938,8 @@ Deletes the specified value from the configuration file
 
 Forces the config file to be re-read.  Also see the I<-reloadsig>
 option to the B<new> method for a way to connect this method to a
-signal (such as SIGHUP).
+signal (such as SIGHUP). Returns undef if the file can not be 
+opened.
 
 =head2 Sections
 
@@ -1059,7 +1064,7 @@ section from the ini file using the Perl C<delete> function.
 
 If you really want to delete B<all> the items in the ini file, this 
 will do it. Of course, the changes won't be written to the actual
-file unless you call B<ReWriteFile> on the object tied to the hash.
+file unless you call B<RewriteConfig> on the object tied to the hash.
 
 =head2 Parameter names
 
@@ -1172,5 +1177,3 @@ This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
-
-

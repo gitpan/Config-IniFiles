@@ -54,7 +54,18 @@ Looks like we missed a change log for 0.07. Bummer.
   not exist. Modified val docs section to indicate a undef return
   when this occurs.
 
-To do:
-* Replace IniConf.pm with a note explaining that it is now
-called Config::IniFiles, and why this move was made.
+0.09
+Hey! Where's the change log for 0.09?
+
+0.10 September 13, 2000 by JW/WADG
+* Fixed reference in POD to ReWriteFile. changes to RewriteConfig
+* Applied patch for failed open bug submitted by Mordechai T. Abzug Aug 18
+* Doc'd behavior of failed open
+* Removed planned SIG testing from test.pl as SIGs have been removed
+* Applied patch from Thibault Deflers to fix bug in parameter list
+  when a parameter value is undef
+
+0.11 September 13, 2000 by JW/WADG
+* Applied patch to Group and GroupMembers functions to return empty
+  list when no groups are present (submitted by John Bass, Sep 13)
 

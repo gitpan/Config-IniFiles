@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..26\n"; }
+BEGIN { $| = 1; print "1..29\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Config::IniFiles;
 $loaded = 1;
@@ -345,7 +345,7 @@ if( $value eq 'value1' ) {
 
 # test 26
 $t++;
-print "Store new section in hash ......... ";
+print "Store new section in hash ........ ";
 tied(%ini)->RewriteConfig;
 tied(%ini)->ReadConfig;
 $value = $ini{newsect}{four};
@@ -354,8 +354,36 @@ if( $value eq 'value4' ) {
 } else {
 	print "not ok $t\n";
 }
+ 
+# test 27
+$t++;
+print "Checking failure for missing ini (a failure message is normal here)\n";
+if(!tie(%foo, 'Config::IniFiles', -file => "doesnotexist.ini") ) {
+	print "                               ... ok $t\n";
+} else {
+	print "                               ... not ok $t\n";
+}
 
-unless( 1 ) {
-#      SIG testing
-} # end unless
+# test 28
+$t++;
+print "Sections/Parms for undef value ... ";
+$n1 = tied(%ini)->Parameters( 'newsect' );
+$ini{newsect}{four} = undef;
+$n2 = tied(%ini)->Parameters( 'newsect' );
+$ini{newsect}{four} = 'value4';
+$n3 = tied(%ini)->Parameters( 'newsect' );
+if( $n1 == $n1 && $n2 == $n3 ) {
+	print "ok $t\n";
+} else {
+	print "not ok $t\n";
+}
+
+# test 29
+$t++;
+print "Empty list when no groups ........ ";
+if( $en->Groups == () ) {
+	print "ok $t\n";
+} else {
+	print "not ok $t\n";
+}
 
