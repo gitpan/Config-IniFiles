@@ -18,6 +18,8 @@ chdir('t') if ( -d 't' );
 # Load ini file and write as new file
 $ini = new Config::IniFiles -file => "test.ini";
 $ini->SetFileName("test03.ini");
+$ini->SetWriteMode("0666");
+unlink "test03.ini";
 $ini->RewriteConfig;
 $ini->ReadConfig;
 ok($ini);
@@ -104,4 +106,7 @@ ok ($value =~ /\@#\@CF Automatically created by 'config_project' at Thu Mar 21 0
 # Test 15
 $value = $ini->val('turbo_library', 'TurboLibPaths');
 ok ($value =~ m:\$WORKAREA/resources/c11_test_flow/vhdl_rtl\s+\$WORKAREA/resources/cstarlib_reg_1v5/vhdl_rtl:);
+
+# Clean up when we're done
+unlink "test03.ini";
 

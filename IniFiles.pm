@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 2.30 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 2.36 $))[1];
 require 5.004;
 use strict;
 use Carp;
@@ -7,7 +7,7 @@ use Symbol 'gensym','qualify_to_ref';   # For the 'any data type' hack
 
 @Config::IniFiles::errors = ( );
 
-#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.30 2002/10/15 18:51:07 wadg Exp $
+#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.36 2002/12/18 01:43:11 wadg Exp $
 
 =head1 NAME
 
@@ -17,7 +17,7 @@ Config::IniFiles - A module for reading .ini-style configuration files.
 
   use Config::IniFiles;
   my $cfg = new Config::IniFiles( -file => "/path/configfile.ini" );
-  print "We have parm " . $cfg->val( 'Section', 'Parameter' ) . "."
+  print "The value is " . $cfg->val( 'Section', 'Parameter' ) . "."
   	if $cfg->val( 'Section', 'Parameter' );
 
 =head1 DESCRIPTION
@@ -189,7 +189,7 @@ sub new {
 
   my $self           = {};
   # Set config file to default value, which is nothing
-  $self->{cf}        = '';
+  $self->{cf}        = undef;
   if( ref($parms{-import}) && ($parms{-import}->isa('Config::IniFiles')) ) {
     # Import from the import object by COPYing, so we
 	# don't clobber the old object
@@ -199,7 +199,7 @@ sub new {
     $self->{default}   = '';
     $self->{imported}  = [];
     if( defined $parms{-import} ) {
-      carp "Invalid -import value was ignored.";
+      carp "Invalid -import value \"$parms{-import}\" was ignored.";
       delete $parms{-import};
     } # end if
   } # end if
@@ -217,7 +217,11 @@ sub new {
   # because each() could return parameters in any order
   if (defined ($v = delete $parms{'-import'})) {
     # Store the imported object's file parameter for reload
-    push( @{$self->{imported}}, $self->{cf} ) if $self->{cf};
+    if( $self->{cf} ) {
+        push( @{$self->{imported}}, $self->{cf} );
+    } else {
+        push( @{$self->{imported}}, "<Un-named file>" );
+    } # end if
   }
   if (defined ($v = delete $parms{'-file'})) {
     # Should we be pedantic and check that the file exists?
@@ -275,7 +279,7 @@ sub new {
   bless $self, $class;
 
   # No config file specified, so everything's okay so far.
-  if ($self->{cf} eq '') {
+  if (not defined $self->{cf}) {
     return $self;
   }
   
@@ -286,11 +290,12 @@ sub new {
   }
 }
 
-=head2 val ($section, $parameter)
+=head2 val ($section, $parameter [, $default] )
 
 Returns the value of the specified parameter (C<$parameter>) in section 
-C<$section>, returns undef if no section or no parameter for the given section
-section exists.
+C<$section>, returns undef (or C<$default> if specified) if no section or 
+no parameter for the given section section exists.
+
 
 If you want a multi-line/value field returned as an array, just
 specify an array as the receiver:
@@ -304,10 +309,12 @@ otherwise the values will be joined using \n.
 =cut
 
 sub val {
-  my ($self, $sect, $parm) = @_;
+  my ($self, $sect, $parm, $def) = @_;
 
+  # Always return undef on bad parameters
   return undef if not defined $sect;
   return undef if not defined $parm;
+  
   if ($self->{nocase}) {
     $sect = lc($sect);
     $parm = lc($parm);
@@ -316,6 +323,10 @@ sub val {
   my $val = defined($self->{v}{$sect}{$parm}) ?
     $self->{v}{$sect}{$parm} :
     $self->{v}{$self->{default}}{$parm};
+  
+  # If the value is undef, make it $def instead (which could just be undef)
+  $val = $def unless defined $val;
+  
   # Return the value in the desired context
   if (wantarray and ref($val) eq "ARRAY") {
     return @$val;
@@ -461,21 +472,23 @@ sub ReadConfig {
   # Initialize (and clear out) storage hashes
   # unless we imported them from another file [JW]
   if( @{$self->{imported}} ) {
-    #
-    # Run up the import tree to the top, then reload coming
-    # back down, maintaining the imported file names and our 
-    # file name
-    #
-    my $cf = $self->{cf};
-    $self->{cf} = pop @{$self->{imported}};
-    $self->ReadConfig;
-    push @{$self->{imported}}, $self->{cf};
-    $self->{cf} = $cf;
+      #
+      # Run up the import tree to the top, then reload coming
+      # back down, maintaining the imported file names and our 
+      # file name.
+      # This is only needed on a re-load though
+      unless( $self->{firstload} ) {
+        my $cf = $self->{cf};
+        $self->{cf} = pop @{$self->{imported}};
+        $self->ReadConfig;
+        push @{$self->{imported}}, $self->{cf};
+        $self->{cf} = $cf;
+      } # end unless
   } else {
-    $self->{sects}  = [];		# Sections
-    $self->{group}  = {};		# Subsection lists
-    $self->{v}      = {};		# Parameter values
-    $self->{sCMT}   = {};		# Comments above section
+      $self->{sects}  = [];		# Sections
+      $self->{group}  = {};		# Subsection lists
+      $self->{v}      = {};		# Parameter values
+      $self->{sCMT}   = {};		# Comments above section
   } # end if
   
   return undef if (
@@ -506,7 +519,7 @@ sub ReadConfig {
   
   # Get mod time of file so we can retain it (if not from STDIN)
   my @stats = stat $fh;
-  $self->{file_mode} = sprintf "%04o", $stats[2] if defined $stats[2];
+  $self->{file_mode} = sprintf("%04o", $stats[2]) if defined $stats[2];
   
   # Get the entire file into memory (let's hope it's small!)
   local $_;
@@ -561,7 +574,7 @@ sub ReadConfig {
       $self->SetSectionComment($sect, @cmts);
       @cmts = ();
     }
-    elsif (($parm, $val) = /^\s*([^=]+?)\s*=\s*(.*)$/) {	# new parameter
+    elsif (($parm, $val) = /^\s*([^=]*?[^=\s])\s*=\s*(.*)$/) {	# new parameter
       $parm = lc($parm) if $nocase;
       $self->{pCMT}{$sect}{$parm} = [@cmts];
       @cmts = ( );
@@ -636,7 +649,7 @@ sub ReadConfig {
       push(@{$self->{parms}{$sect}}, $parm) unless grep(/^\Q$parm\E$/, @{$self->{parms}{$sect}});
     }
     else {
-      push(@Config::IniFiles::errors, sprintf('%d: %s', $lineno, $_));
+      push(@Config::IniFiles::errors, sprintf("Line \%d in file " . $self->{cf} . " is mal-formed:\n\t\%s", $lineno, $_));
     }
   }
 
@@ -887,10 +900,43 @@ sub GroupMembers {
   return ();
 }
 
+=head2 SetWriteMode ($mode)
+
+Sets the mode (permissions) to use when writing the INI file.
+
+$mode must be a string representation of the octal mode.
+
+=cut
+
+sub SetWriteMode
+{
+	my $self = shift;
+	my $mode = shift;
+	return undef if not defined ($mode);
+	return undef if not ($mode =~ m/[0-7]{3,3}/);
+	$self->{file_mode} = $mode;
+	return $mode;
+}
+
+=head2 GetWriteMode ($mode)
+
+Gets the current mode (permissions) to use when writing the INI file.
+
+$mode is a string representation of the octal mode.
+
+=cut
+
+sub GetWriteMode
+{
+	my $self = shift;
+	return undef if not exists $self->{file_mode};
+	return $self->{file_mode};
+}
+
 =head2 WriteConfig ($filename)
 
 Writes out a new copy of the configuration file.  A temporary file
-(ending in .new) is written out and then renamed to the specified
+(ending in '-new') is written out and then renamed to the specified
 filename.  Also see B<BUGS> below.
 
 =cut
@@ -899,9 +945,21 @@ sub WriteConfig {
   my $self = shift;
   my $file = shift;
   
-  return undef if not defined $file;
+  return undef unless defined $file;
+  if (-e $file) {
+  	if (not (-w $file))
+ 	{
+		#carp "File $file is not writable.  Refusing to write config";
+		return undef;
+ 	}
+	my $mode = (stat $file)[2];
+	$self->{file_mode} = sprintf "%04o", ($mode & 0777);
+	#carp "Using mode $self->{file_mode} for file $file";
+  } elsif (defined($self->{file_mode}) and not (oct($self->{file_mode}) & 0222)) {
+  	#carp "Store mode $self->{file_mode} prohibits writing config";
+  }
 
-  my $new_file = "$file.new";
+  my $new_file = $file . "-new";
   local(*F);
   open(F, "> $new_file") || do {
     carp "Unable to write temp config file $new_file: $!";
@@ -939,6 +997,26 @@ sub RewriteConfig {
   
   # Return whatever WriteConfig returns :)
   $self->WriteConfig($self->{cf});
+}
+
+=head2 GetFileName
+
+Returns the filename associated with this INI file.
+
+If no filename has been specified, returns undef.
+
+=cut
+
+sub GetFileName
+{
+	my $self = shift;
+	my $filename;
+	if (exists $self->{cf}) {
+		$filename = $self->{cf};
+	} else {
+		undef $filename;
+	}
+	return $filename;
 }
 
 =head2 SetFileName ($filename)
@@ -1165,7 +1243,7 @@ sub SetParameterComment
 	return scalar @comment;
 }
 
-=head2 GetParameterComment ($sect, $parm)
+=head2 GetParameterComment ($section, $parameter)
 
 Gets the comment attached to a parameter.
 
@@ -1192,7 +1270,7 @@ sub GetParameterComment
 	return (wantarray)?@comment:join " ", @comment;
 }
 
-=head2 DeleteParameterComment ($sect, $parm)
+=head2 DeleteParameterComment ($section, $parmeter)
 
 Deletes the comment attached to a parameter.
 
@@ -1281,7 +1359,7 @@ sub SetParameterEOT
     $self->{EOT}{$sect}{$parm} = $EOT;
 }
 
-=head2 DeleteParameterEOT ($sect, $parm)
+=head2 DeleteParameterEOT ($section, $parmeter)
 
 Removes the EOT marker for the given section and parameter.
 When writing a configuration file, if no EOT marker is defined 
@@ -1332,7 +1410,7 @@ sub Delete {
 
 =head1 USAGE -- Tied Hash
 
-=head2 tie $ini, 'Config::IniFiles', (-file=>$filename, [-option=>value ...] )
+=head2 tie %ini, 'Config::IniFiles', (-file=>$filename, [-option=>value ...] )
 
 Using C<tie>, you can tie a hash to a B<Config::IniFiles> object. This creates a new
 object which you can access through your hash, so you use this instead of the 
@@ -2026,6 +2104,20 @@ modify it under the same terms as Perl itself.
 =head1 Change log
 
      $Log: IniFiles.pm,v $
+     Revision 2.36  2002/12/18 01:43:11  wadg
+     - Improved error message when an invalid line is encountered in INI file
+     - Fixed bug 649220; importing a non-file-based object into a file one
+       no longer destroys the original object
+
+     Revision 2.33  2002/11/12 14:48:16  grail
+     Addresses feature request - [ 403496 ] A simple change will allow support on more platforms
+
+     Revision 2.32  2002/11/12 14:15:44  grail
+     Addresses bug - [225971] Respect Read-Only Permissions of File System
+
+     Revision 2.31  2002/10/29 01:45:47  grail
+     [ 540867 ] Add GetFileName method
+
      Revision 2.30  2002/10/15 18:51:07  wadg
      Patched to stopwarnings about utf8 usage.
 
