@@ -1,0 +1,333 @@
+NAME
+    Config::IniFiles - A module for reading .ini-style configuration files.
+
+SYNOPSIS
+      use Config::IniFiles;
+      my $cfg = new Config::IniFiles( -file => "/path/configfile.ini" );
+      print "We have parm $cfg->val( 'Section', 'Parameter' )." if $cfg->val( 'Section', 'Parameter' );
+
+DESCRIPTION
+    Config::IniFiles provides a way to have readable configuration files
+    outside your Perl script. The configuration can be safely reloaded upon
+    receipt of a signal. Configurations can be imported (inherited,
+    stacked,...), sections can be grouped, and settings can be accessed from
+    a tied hash.
+
+USAGE -- Object Interface
+    Get a new Config::IniFiles object with the *new* method:
+
+      $cfg = Config::IniFiles->new( -file => "/path/configfile.ini" );
+      $cfg = new Config::IniFiles -file => "/path/configfile.ini";
+
+    Optional named parameters may be specified after the configuration file
+    name. See the *new* in the METHODS section, below.
+
+    INI files consist of a number of sections, each preceeded with the
+    section name in square brackets. The first nonblank character of the
+    line indicating a section must be a left bracket and the last nonblank
+    character of a line indicating a section must be a right bracket. The
+    characters making up the section name can be any symbols at all. The
+    section may even be be empty. However section names must be unique.
+
+    Parameters are specified in each section as Name=Value. Any spaces
+    around the equals sign will be ignored, and the value extends to the end
+    of the line. Parameter names are localized to the namespace of the
+    section, but must be unique within a section.
+
+      [section]
+      Parameter=Value
+
+    Both the hash mark (#) and the semicolon (;) are comment characters.
+    Lines that begin with either of these characters will be ignored. Any
+    amount of whitespace may preceed the comment character.
+
+    Multiline or multivalued fields may also be defined ala UNIX "here
+    document" syntax:
+
+      Parameter=<<EOT
+      value/line 1
+      value/line 2
+      EOT
+
+    You may use any string you want in place of "EOT". Note that what
+    follows the "<<" and what appears at the end of the text MUST match
+    exactly, including any trailing whitespace.
+
+    See the METHODS section, below, for settable options.
+
+    Values from the config file are fetched with the val method:
+
+      $value = $cfg->val('Section', 'Parameter');
+
+    If you want a multi-line/value field returned as an array, just specify
+    an array as the receiver:
+
+      @values = $cfg->val('Section', 'Parameter');
+
+METHODS
+  new (-file=>$filename, [-option=>value ...] )
+
+    Returns a new configuration object (or "undef" if the configuration file
+    has an error). One Config::IniFiles object is required per configuration
+    file. The following named parameters are available:
+
+    *-default* section
+              Specifies a section is used for default values. For example,
+              if you look up the "permissions" parameter in the "users"
+              section, but there is none, Config::IniFiles will look to your
+              default section for a "permissions" value before returning
+              undef.
+
+    *-reloadwarn* 0|1
+              Set -reloadwarn => 1 to enable a warning message (output to
+              STDERR) whenever the config file is reloaded. The reload
+              message is of the form:
+
+                PID <PID> reloading config file <file> at YYYY.MM.DD HH:MM:SS
+
+              See your system documentation for information on valid
+              signals.
+
+    *-nocase* 0|1
+              Set -nocase => 1 to handle the config file in a
+              case-insensitive manner (case in values is preserved,
+              however). By default, config files are case-sensitive (i.e., a
+              section named 'Test' is not the same as a section named
+              'test'). Note that there is an added overhead for turning off
+              case sensitivity.
+
+    *-import* object
+              This allows you to import or inherit existing setting from
+              another Config::IniFiles object. When importing settings from
+              another object, sections with the same name will be merged and
+              parameters that are defined in both the imported object and
+              the *-file* will take the value of given in the *-file*.
+
+              If a *-default* section is also given on this call, and it
+              does not coincide with the default of the imported object, the
+              new default section will be used instead. If no *-default*
+              section is given, then the default of the imported object will
+              be used.
+
+  val ($section, $parameter)
+
+    Returns the value of the specified parameter in section $section.
+
+    If you want a multi-line/value field returned as an array, just specify
+    an array as the receiver:
+
+      @values = $cfg->val('Section', 'Parameter');
+
+  setval ($section, $parameter, $value, [ $value2, ... ])
+
+    Sets the value of parameter $parameter in section $section to $value (or
+    to a set of values). See below for methods to write the new
+    configuration back out to a file.
+
+    You may not set a parameter that didn't exist in the original
+    configuration file. setval will return *undef* if this is attempted. See
+    newval below to do this. Otherwise, it returns 1.
+
+  newval($setion, $parameter, $value [, $value2, ...])
+
+    Adds a new value to the configuration file.
+
+  delval($section, $parameter)
+
+    Deletes the specified value from the configuration file
+
+  ReadConfig
+
+    Forces the config file to be re-read. Also see the *-reloadsig* option
+    to the new method for a way to connect this method to a signal (such as
+    SIGHUP).
+
+  Sections
+
+    Returns an array containing section names in the configuration file. If
+    the *nocase* option was turned on when the config object was created,
+    the section names will be returned in lowercase.
+
+  Groups
+
+    Returns an array containing the names of available groups.
+
+    Groups are specified in the config file as new sections of the form
+
+      [GroupName MemberName]
+
+    This is useful for building up lists. Note that parameters within a
+    "member" section are referenced normally (i.e., the section name is
+    still "Groupname Membername", including the space).
+
+  GroupMembers ($group)
+
+    Returns an array containing the members of specified $group.
+
+  Parameters ($sectionname)
+
+    Returns an array containing the parameters contained in the specified
+    section.
+
+  WriteConfig ($filename)
+
+    Writes out a new copy of the configuration file. A temporary file
+    (ending in .new) is written out and then renamed to the specified
+    filename. Also see BUGS below.
+
+  RewriteConfig
+
+    Same as WriteConfig, but specifies that the original configuration file
+    should be rewritten.
+
+USAGE -- Tied Hash
+  tie $ini, 'Config::Inifiles', (-file=>$filename, [-option=>value ...] )
+
+    Using `tie', you can tie a hash to a Config::IniFiles object. This
+    creates a new object which you can access through your hash, so you use
+    this instead of the new method. This actually creates a hash of hashes
+    to access the values in the .ini-file.
+
+    Here's an example:
+
+      use Config::IniFiles;
+  
+      my %ini
+      tie %ini, 'Config::IniFiles', ( -file => "/path/configfile.ini" );
+
+      print "We have parm %ini{Section}{Parameter}." if %ini{'Section'}{'Parameter'};
+
+    Accessing and using the hash works just like accessing and using an
+    object, except in the way you reference it. More information about using
+    the hash interface is descibed below under the corresponding object
+    methods.
+
+    For those methods that do not coincide with the hash paradigm, you can
+    use the Perl `tied' function to get at the underlying object tied to the
+    hash and call methods on that object. For example, to write the hash out
+    to a new ini file, you would do something like this:
+
+      tied( %ini )->WriteConfig( "/newpath/newconfig.ini" ) ||
+        die "Could not write settings to new file.";
+
+  $val = $ini{$section}{$parameter}
+
+    Returns the value of $parameter in $section, through the hash tie
+    interface.
+
+    Because of limitations in Perl's tie implementation, multiline values
+    accessed through a hash will always be returned as a single value with
+    each line joined by the default line separator ($\). To break them apart
+    you can simple do this:
+
+      @lines = split( "$\", $ini{section}{multi_line_parameter} );
+
+  %hash = %{$ini{$section}}
+
+    Using the tie interface, you can copy whole sections of the ini file
+    into another hash. Note that this makes a copy of the entire section.
+    The new hash in no longer tied to the ini file, In particular, this
+    means -default and -nocase settings will not apply to `%hash'.
+
+  $ini{$section}{$parameter} = $value;
+
+    Sets the value of $parameter in $section to value given. through the
+    hash interface. If the parameter did not exist in the original file, it
+    will be created.
+
+    To set a multiline or multivalue parameter use something like this:
+
+     $ini{$section}{$parameter} = [$value1, $value2, ...];
+
+  $ini{$section} = {}; %{$ini{$section}} = %parameters;
+
+    Through the hash interface, you have the ability to replace the entire
+    section with a new set of parameters. This call will fail, however, if
+    the argument passed in NOT a hash reference. You must use both lines, as
+    shown above so that Perl recognizes the section as a hash reference
+    context before COPYing over the values from your `%parameters' hash.
+
+  delete $ini{$section}{$parameter}
+
+    When tied to a hash, you can use the Perl `delete' function to
+    completely remove a parameter from a section.
+
+  delete $ini{$section}
+
+    The tied interface also allows you to delete an entire section from the
+    ini file using the Perl `delete' function.
+
+  $ini = ();
+
+    If you really want to delete all the items in the ini file, this will do
+    it. Of course, the changes won't be written to the actual file unless
+    you call ReWriteFile on the object tied to the hash.
+
+  Parameter names
+
+    my @keys = keys %{$ini{$section}}
+    while (($k, $v) = each %{$ini{$section}}) {...}
+    if( exists %{$ini{$section}}, $parameter ) {...}
+    When tied to a hash, you use the Perl `keys' and `each' functions to
+    iteratively list the parameters (`keys') or parameters and their values
+    (`each') in a given section.
+
+    You can also use the Perl `exists' function to see if a parameter is
+    defined in a given section.
+
+    Note that none of these will return parameter names that are part if the
+    default section (if set), although accessing and unknown parameter in
+    the specified section will return a value from the default section if
+    there is one.
+
+  Section names
+
+    keys %ini, $section
+    while (($k, $v) = each %ini) {...}
+    if( exists %ini, $section ) {...}
+    When tied to a hash, you use the Perl `keys' and `each' functions to
+    iteratively list the sections in the ini file.
+
+    You can also use the Perl `exists' function to see if a section is
+    defined in the file.
+
+DIAGNOSTICS
+  @Config::IniFiles::errors
+
+    Contains a list of errors encountered while parsing the configuration
+    file. If the *new* method returns undef, check the value of this to find
+    out what's wrong. This value is reset each time a config file is read.
+
+BUGS
+    *  The output from [Re]WriteConfig/OutputConfig might not be as pretty
+       as it can be. Comments are tied to whatever was immediately below
+       them.
+
+    *  No locking is done by [Re]WriteConfig. When writing servers, take
+       care that only the parent ever calls this, and consider making your
+       own backup.
+
+Data Structure
+      $iniconf->{cf} = "config_file_name"
+              ->{EOT}{$sect}{$parm} = "end of text string"
+              ->{firstload} = 0
+              ->{group}{$group} = \@group_members
+              ->{nocase} = 0
+              ->{parms}{$section} = \@section_parms
+              ->{pCMT}{$section}{$parm} = \@comment_lines
+              ->{reloadwarn} = 0
+              ->{sCMT}{$section} = \@comment_lines
+              ->{sects} = \@sections
+              ->{v}{$section}{$parm} = $value   OR  \@values
+              ->{startup_settings} = \%orginal_object_parameters
+
+AUTHOR
+    The original code was written by Scott Hutton. It has since been taken
+    over by Rich Bowen, with many contributions from various other people.
+
+            Rich Bowen <rbowen@rcbowen.com>
+            http://dev.rcbowen.com/iniconf/
+
+    This program is free software; you can redistribute it and/or modify it
+    under the same terms as Perl itself.
+

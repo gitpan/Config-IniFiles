@@ -1,0 +1,43 @@
+Revision history for Perl extension Config::IniFiles.
+
+0.01  Mon Jun 12, 2000 by RBOW
+Some general code cleanup, in preparation for changes to
+come. Put up Majordomo mailing list and sent invitation to
+various people to join it.
+
+0.02 Tue Jun 13, 2000 by RBOW
+* Fixed bug reported by Bernie Cosell - Sections, Parameters, 
+and GroupMembers return undef if there are no sections,
+parameters, or group members. These functions now return
+() if the particular value is undefined.
+* Added some contributed documentation, from Alex Satrapa, explaining
+how the internal data structure works. 
+* Set up a project on SourceForge. (Not a change, but worth
+noting).
+* Added Groups method to return a list of section groups.
+
+0.03 Thu Jun 15, 2000 by RBOW
+* Modifications to permit 'use strict', and to get 'make test' working
+again.
+
+
+0.04 Thu Jun 15 - Fri Jun 16, 2000 by JW/WADG
+* Added support for -import option on ->new
+* Added support for tying a hash
+* Edited POD for grammer, clarity and updates
+* Updated test.pl file
+* Fixed bug in multiline/single line output
+* Fixed bug in default handling with tie interface
+* Added bugs to test.pl for regression
+* Fixed bug in {group} vs. {groups} property (first is valid)
+* Fixed return value for empty {sects} or {parms}{$sect} in Sections and Parameters methods
+
+0.05 Sun Jun 18, 2000 by RBOW
+* Added something to shut up -w on VERSIONS
+* Removed unused variables
+
+To do:
+* Replace IniConf.pm with a note explaining that it is now
+called Config::IniFiles, and why this move was made.
+
+
