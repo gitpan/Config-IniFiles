@@ -36,6 +36,9 @@ again.
 * Added something to shut up -w on VERSIONS
 * Removed unused variables
 
+0.06 Sun Jun 25, 2000 by Daniel Winkelmann
+* Patch for uninitialized value bug in newval and setval
+
 To do:
 * Replace IniConf.pm with a note explaining that it is now
 called Config::IniFiles, and why this move was made.

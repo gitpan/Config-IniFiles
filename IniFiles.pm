@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = 0.05;
+$Config::IniFiles::VERSION = 0.06;
 use Carp;
 use strict;
 require 5.004;
@@ -99,6 +99,7 @@ sub setval {
   if (defined($self->{v}{$sect}{$parm})) {
     if (@val > 1) {
       $self->{v}{$sect}{$parm} = \@val;
+	  $self->{EOT}{$sect}{$parm} = 'EOT';
     } else {
       $self->{v}{$sect}{$parm} = shift @val;
     }
@@ -121,6 +122,8 @@ sub newval {
   }
   if (@val > 1) {
     $self->{v}{$sect}{$parm} = \@val;
+	$self->{EOT}{$sect}{$parm} = 'EOT' unless defined
+				$self->{EOT}{$sect}{$parm};
   } else {
     $self->{v}{$sect}{$parm} = shift @val;
   }
