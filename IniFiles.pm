@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = 0.06;
+$Config::IniFiles::VERSION = 0.08;
 use Carp;
 use strict;
 require 5.004;
@@ -83,7 +83,7 @@ sub val {
   my $val = defined($self->{v}{$sect}{$parm}) ?
     $self->{v}{$sect}{$parm} :
     $self->{v}{$self->{default}}{$parm};
-  if( $val =~ m#$/#) {
+  if( defined ($/) && defined ($val) && $val =~ m#$/#) {
     return wantarray ? split( $/, $val ) : $val;
   } else {
     return $val;
@@ -319,6 +319,7 @@ sub OutputConfig {
   my $self = shift;
 
   my($sect, $parm, @cmts);
+  my $ors = $\ || "\n";		# $\ is normally unset
   my $notfirst = 0;
   local $_;
   foreach $sect (@{$self->{sects}}) {
@@ -343,6 +344,7 @@ sub OutputConfig {
       }
 
       my $val = $self->{v}{$sect}{$parm};
+      next if ! defined ($val);	# No parameter exists !!
       if (ref($val) eq 'ARRAY') {
 	my $eotmark = $self->{EOT}{$sect}{$parm};
 	print "$parm= <<$eotmark\n";
@@ -350,12 +352,12 @@ sub OutputConfig {
 	  print "$_\n";
 	}
 	print "$eotmark\n";
-      } elsif( $val =~ /[$\\n]/ ) {
+      } elsif( $val =~ /[$ors]/ ) {
         # The FETCH of a tied hash is never called in 
         # an array context, so gerenate a EOT multiline
         # entry if the entry looks to be multiline
 
-        my @val = split /[$\\n]/, $val;
+        my @val = split /[$ors]/, $val;
         if( @val > 2 ) {
           my $eotmark = $self->{EOT}{$sect}{$parm} || 'EOT';
           print "$parm= <<$eotmark\n";
@@ -433,6 +435,8 @@ sub STORE {
   push(@{$self->{sects}}, $key) unless (grep /^$key$/, @{$self->{sects}});
 
   my %parms = %{$self->{startup_settings}};
+  $self->{parms}{$key} = [];
+  $parms{-parms} = $self->{parms}{$key};
   $parms{-_current_value} = $ref;
   $parms{-default} = $self->{v}{$parms{-default}} if defined $parms{-default} && defined $self->{v}{$parms{-default}};
   tie %{$self->{v}{$key}}, 'Config::IniFiles::_section', %parms;
@@ -898,7 +902,9 @@ then the default of the imported object will be used.
 
 =head2 val ($section, $parameter)
 
-Returns the value of the specified parameter in section $section.
+Returns the value of the specified parameter in section $section,
+returns undef if no section or no parameter for the given section
+exists.
 
 If you want a multi-line/value field returned as an array, just
 specify an array as the receiver:

@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..24\n"; }
+BEGIN { $| = 1; print "1..26\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Config::IniFiles;
 $loaded = 1;
@@ -14,6 +14,11 @@ print "Loaded ........................... ok 1\n";
 
 ######################### End of black magic.
 $t = 1;		# test number incremented at each test
+
+# Okay, $\ may well be unset, and this seems to be the case at least
+# with 5.005 under Linux so set our ors to this and fallback to \n if
+# its not set
+my $ors = $\ || "\n";
 
 # test 2
 $t++;
@@ -56,7 +61,7 @@ $ini->RewriteConfig;
 $ini->ReadConfig;
 $value='';
 $value = $ini->val('test2', 'seven');
-if ($value eq '') {
+if (! defined ($value)) {
 	print "ok $t\n";
 } else {
 	print "not ok $t\n";
@@ -81,8 +86,8 @@ if ($value eq "This\nis a multi-line\nvalue") {
 $t++;
 $value = 0;
 if( open FILE, "<test.ini" ) {
-	$_ = join( $\, <FILE> );
-	$value = /\# This is a section comment[$\\n]\[test1\]/;
+	$_ = join( '', <FILE> );
+	$value = /\# This is a section comment[$ors]\[test1\]/;
 	close FILE;
 }
 print "Section comments preserved ....... ";
@@ -95,7 +100,7 @@ if ($value) {
 
 # test 8
 $t++;
-$value = /\# This is a parm comment[$\\n]five=value5/;
+$value = /\# This is a parm comment[$ors]five=value5/;
 print "Parameter comments preserved ..... ";
 if ($value) {
 	print "ok $t\n";
@@ -229,7 +234,7 @@ tied(%ini)->RewriteConfig;
 tied(%ini)->ReadConfig;
 $value='';
 $value = $ini{test2}{seven};
-if ($value eq '') {
+if (! defined ($value)) {
 	print "ok $t\n";
 } else {
 	print "not ok $t\n";
@@ -309,7 +314,7 @@ if( $value eq 'value6' ) {
 $t++;
 print "Deleting a section in a hash ..... ";
 delete $ini{test2};
-$value = $ini{$test2};
+$value = $ini{test2};
 unless($value) {
 	print "ok $t\n";
 } else {
@@ -338,6 +343,19 @@ if( $value eq 'value1' ) {
 	print "not ok $t\n";
 }
 
+# test 26
+$t++;
+print "Store new section in hash ......... ";
+tied(%ini)->RewriteConfig;
+tied(%ini)->ReadConfig;
+$value = $ini{newsect}{four};
+if( $value eq 'value4' ) {
+	print "ok $t\n";
+} else {
+	print "not ok $t\n";
+}
+
 unless( 1 ) {
 #      SIG testing
 } # end unless
+

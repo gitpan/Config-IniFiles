@@ -39,8 +39,22 @@ again.
 0.06 Sun Jun 25, 2000 by Daniel Winkelmann
 * Patch for uninitialized value bug in newval and setval
 
+0.07
+Looks like we missed a change log for 0.07. Bummer.
+
+0.08
+2000-07-30  Adrian Phillips  <adrianp@powertech.no>
+ 
+* test.pl: Fixed some tests which use $\, and made those that try
+  to check a non existant val check against ! defined.
+
+* IniFiles.pm: hopefully fixed use of $\ when this is unset
+  (problems found when running tests with -w).  Similar problem with
+  $/ which can be undefined and trying to return a val which does
+  not exist. Modified val docs section to indicate a undef return
+  when this occurs.
+
 To do:
 * Replace IniConf.pm with a note explaining that it is now
 called Config::IniFiles, and why this move was made.
-
 
