@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 1.11 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 1.12 $))[1];
 use Carp;
 use strict;
 require 5.004;
@@ -10,7 +10,7 @@ require 5.004;
 
 Config::IniFiles - A module for reading .ini-style configuration files.
 
-     $Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 1.11 2000/11/24 21:20:11 rbowen Exp $
+     $Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 1.12 2000/11/28 11:31:02 grail Exp $
 
 =head1 SYNOPSIS
 
@@ -385,16 +385,16 @@ sub ReadConfig {
       push(@cmts, $_);
       next;
     }
-    elsif (/^\s*\[(.*)\]\s*$/) {		# New Section
+    elsif (/^\s*\[\s*(\S|\S.*\S)\s*\]\s*$/) {		# New Section
       $sect = $1;
       $sect = lc($sect) if $nocase;
       push(@{$self->{sects}}, $sect);
-      if ($sect =~ /(\S+)\s+(\S+)/) {		# New Group Member
-	($group, $groupmem) = ($1, $2);
+      if ($sect =~ /(\S+)\s+\S+/) {		# New Group Member
+	$group = $1;
 	if (!defined($self->{group}{$group})) {
 	  $self->{group}{$group} = [];
 	}
-	push(@{$self->{group}{$group}}, $groupmem);
+	push(@{$self->{group}{$group}}, $sect);
       }
       if (!defined($self->{v}{$sect})) {
 	$self->{sCMT}{$sect} = [@cmts] if @cmts > 0;
@@ -1452,6 +1452,25 @@ modify it under the same terms as Perl itself.
 =head1 Change log
 
      $Log: IniFiles.pm,v $
+     Revision 1.12  2000/11/28 11:31:02  grail
+     Modified section matching and group name matching to allow for whitespace in section brackets.
+
+     Added test to make sure group names work. Perhaps I should have put this somewhere else? Nevermind, it can always be moved later.
+
+     NOTE: THIS UPDATE WILL BREAK CONFIGURATIONS THAT HAVE EMPTY SECTION NAMES, IE:
+
+     []
+     parameter = blah
+
+     [  ]
+     parameter = blah
+
+     A section name must consist of at least one non-whitespace character, and ends on the last non-whitespace character:
+
+     [ A ] <- section name = "A"
+
+     [ A B B A ] <- section name = "A B B A"
+
      Revision 1.11  2000/11/24 21:20:11  rbowen
      Resolved SourceForge bug #122445 - a parameter should be split from its value on the first = sign encountered, not on the last one. Added test suite to test this, and put test case in test.ini
 
