@@ -1,6 +1,6 @@
 #[JW for editor]:mode=perl:tabSize=8:indentSize=2:noTabs=true:indentOnEnter=true:
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 2.26 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 2.27 $))[1];
 require 5.004;
 use strict;
 use Carp;
@@ -8,7 +8,7 @@ use Symbol 'gensym','qualify_to_ref';   # For the 'any data type' hack
 
 @Config::IniFiles::errors = ( );
 
-#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.26 2001/12/19 22:20:50 wadg Exp $
+#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.27 2001/12/20 16:03:49 wadg Exp $
 
 =head1 NAME
 
@@ -437,7 +437,7 @@ sub ReadConfig {
   my $first = '';
   foreach ( @lines ) {
     next if /^\s*$/;	# ignore blank lines
-    next if /^\s*\#/;	# ignore comments
+    next if /^\s*[\#\;]/;	# ignore comments
     $first = $_;
     last;
   }
@@ -1912,6 +1912,12 @@ modify it under the same terms as Perl itself.
 =head1 Change log
 
      $Log: IniFiles.pm,v $
+     Revision 2.27  2001/12/20 16:03:49  wadg
+     - Fixed bug introduced in new valid file check where ';' comments in first lines were not considered valid
+     - Rearranged some tests to put them in the proper files (case and -default)
+     - Added more comment test to cover more cases
+     - Fixed first two comments tests which weren't doing anything
+
      Revision 2.26  2001/12/19 22:20:50  wadg
      #481513 Recognize badly formatted files
 
