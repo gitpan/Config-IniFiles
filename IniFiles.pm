@@ -1,12 +1,12 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 2.17 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 2.18 $))[1];
 use Carp;
 use strict;
 require 5.004;
 
 @Config::IniFiles::errors = ( );
 
-#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.17 2001/03/21 21:05:12 wadg Exp $
+#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.18 2001/03/30 04:41:08 rbowen Exp $
 
 =head1 NAME
 
@@ -16,8 +16,7 @@ Config::IniFiles - A module for reading .ini-style configuration files.
 
   use Config::IniFiles;
   my $cfg = new Config::IniFiles( -file => "/path/configfile.ini" );
-  print "We have ni
-  " . $cfg->val( 'Section', 'Parameter' ) . "."
+  print "We have parm " . $cfg->val( 'Section', 'Parameter' ) . "."
   	if $cfg->val( 'Section', 'Parameter' );
 
 =head1 DESCRIPTION
@@ -936,7 +935,7 @@ sub DeleteParameterEOT
 	delete $self->{EOT}{$section}{$parameter};
 }
 
-=item DeleteSection ( $section_name )
+=head2 DeleteSection ( $section_name )
 
 Completely removes the entire section from the configuration.
 
@@ -966,7 +965,7 @@ sub DeleteSection {
 	} # end DeleteSection
 
 
-=item Delete
+=head2 Delete
 
 Deletes the entire configuration file in memory.
 
@@ -1633,6 +1632,13 @@ modify it under the same terms as Perl itself.
 =head1 Change log
 
      $Log: IniFiles.pm,v $
+     Revision 2.18  2001/03/30 04:41:08  rbowen
+     Small documentation change in IniFiles.pm - pod2* was choking on misplaces
+     =item tags. And I regenerated the README
+     The main reason for this release is that the MANIFEST in the 2.17 version was
+     missing one of the new test suite files, and that is included in this
+     re-release.
+
      Revision 2.17  2001/03/21 21:05:12  wadg
      Documentation edits
 
