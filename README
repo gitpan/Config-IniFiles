@@ -491,6 +491,9 @@ AUTHOR and ACKNOWLEDGEMENTS
 
 Change log
          $Log: IniFiles.pm,v $
+         Revision 2.23  2001/12/07 09:18:00  wadg
+         Forgot to update t/test.ini
+
          Revision 2.22  2001/12/06 16:52:39  wadg
          Fixed bugs 482353,233372. Updated doc for new mgr.
 

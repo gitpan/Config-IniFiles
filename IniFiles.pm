@@ -1,13 +1,13 @@
 #[JW for editor]:mode=perl:tabSize=8:indentSize=2:noTabs=true:indentOnEnter=true:
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 2.22 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 2.23 $))[1];
 use Carp;
 use strict;
 require 5.004;
 
 @Config::IniFiles::errors = ( );
 
-#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.22 2001/12/06 16:52:39 wadg Exp $
+#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.23 2001/12/06 16:52:39 wadg Exp $
 
 =head1 NAME
 
@@ -1843,6 +1843,9 @@ modify it under the same terms as Perl itself.
 =head1 Change log
 
      $Log: IniFiles.pm,v $
+     Revision 2.23  2001/12/07 09:18:00  wadg
+     Forgot to update t/test.ini
+
      Revision 2.22  2001/12/06 16:52:39  wadg
      Fixed bugs 482353,233372. Updated doc for new mgr.
 
