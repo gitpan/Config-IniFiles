@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 1.13 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 2.10 $))[1];
 use Carp;
 use strict;
 require 5.004;
@@ -10,7 +10,7 @@ require 5.004;
 
 Config::IniFiles - A module for reading .ini-style configuration files.
 
-     $Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 1.13 2000/11/28 12:41:42 grail Exp $
+     $Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.10 2000/12/13 17:40:18 rbowen Exp $
 
 =head1 SYNOPSIS
 
@@ -21,8 +21,7 @@ Config::IniFiles - A module for reading .ini-style configuration files.
 =head1 DESCRIPTION
 
 Config::IniFiles provides a way to have readable configuration files outside
-your Perl script. The configuration can be safely reloaded upon
-receipt of a signal. Configurations can be imported (inherited, stacked,...), 
+your Perl script.  Configurations can be imported (inherited, stacked,...), 
 sections can be grouped, and settings can be accessed from a tied hash.
 
 =cut
@@ -42,8 +41,7 @@ section name in square brackets.  The first nonblank character of
 the line indicating a section must be a left bracket and the last
 nonblank character of a line indicating a section must be a right
 bracket. The characters making up the section name can be any 
-symbols at all. The section may even be be empty. However section
-names must be unique.
+symbols at all. However section names must be unique.
 
 Parameters are specified in each section as Name=Value.  Any spaces
 around the equals sign will be ignored, and the value extends to the
@@ -110,8 +108,6 @@ whenever the config file is reloaded.  The reload message is of the
 form:
 
   PID <PID> reloading config file <file> at YYYY.MM.DD HH:MM:SS
-
-See your system documentation for information on valid signals.
 
 =item I<-nocase> 0|1
 
@@ -316,9 +312,7 @@ sub delval {
 
 =head2 ReadConfig
 
-Forces the config file to be re-read.  Also see the I<-reloadsig>
-option to the B<new> method for a way to connect this method to a
-signal (such as SIGHUP). Returns undef if the file can not be 
+Forces the config file to be re-read. Returns undef if the file can not be 
 opened.
 
 =cut
@@ -388,13 +382,13 @@ sub ReadConfig {
     elsif (/^\s*\[\s*(\S|\S.*\S)\s*\]\s*$/) {		# New Section
       $sect = $1;
       $sect = lc($sect) if $nocase;
-      push(@{$self->{sects}}, $sect);
+      push(@{$self->{sects}}, $sect) unless grep(/\Q$sect\E/, @{$self->{sects}});
       if ($sect =~ /(\S+)\s+\S+/) {		# New Group Member
 	$group = $1;
 	if (!defined($self->{group}{$group})) {
 	  $self->{group}{$group} = [];
 	}
-	push(@{$self->{group}{$group}}, $sect);
+	push(@{$self->{group}{$group}}, $sect) unless grep(/\Q$sect\E/, @{$self->{group}{$group}});
       }
       if (!defined($self->{v}{$sect})) {
 	$self->{sCMT}{$sect} = [@cmts] if @cmts > 0;
@@ -424,16 +418,40 @@ sub ReadConfig {
 	  }
 	}
 	if ($foundeot) {
-	  $self->{v}{$sect}{$parm} = \@val;
-	  $self->{EOT}{$sect}{$parm} = $eotmark;
+	    if (exists $self->{v}{$sect}{$parm}) {
+	      if (ref($self->{v}{$sect}{$parm}) eq "ARRAY") {
+	        # Add to the array
+	        push @{$self->{v}{$sect}{$parm}}, @val;
+	      } else {
+	        # Create array
+	        my $old_value = $self->{v}{$sect}{$parm};
+	        my @new_value = ($old_value, @val);
+	        $self->{v}{$sect}{$parm} = \@new_value;
+	      }
+	    } else {
+		  $self->{v}{$sect}{$parm} = \@val;
+		}
+		$self->{EOT}{$sect}{$parm} = $eotmark;
 	} else {
 	  push(@Config::IniFiles::errors, sprintf('%d: %s', $startline,
 			      qq#no end marker ("$eotmark") found#));
 	}
       } else {
-	$self->{v}{$sect}{$parm} = $val;
+    if (exists $self->{v}{$sect}{$parm}) {
+      if (ref($self->{v}{$sect}{$parm}) eq "ARRAY") {
+        # Add to the array
+        push @{$self->{v}{$sect}{$parm}}, $val;
+      } else {
+        # Create array
+        my $old_value = $self->{v}{$sect}{$parm};
+        my @new_value = ($old_value, $val);
+        $self->{v}{$sect}{$parm} = \@new_value;
       }
-      push(@{$self->{parms}{$sect}}, $parm);
+    } else {
+	$self->{v}{$sect}{$parm} = $val;
+	}
+      }
+      push(@{$self->{parms}{$sect}}, $parm) unless grep(/\Q$parm\E/, @{$self->{parms}{$sect}});
     }
     else {
       push(@Config::IniFiles::errors, sprintf('%d: %s', $lineno, $_));
@@ -496,7 +514,8 @@ Groups are specified in the config file as new sections of the form
 
 This is useful for building up lists.  Note that parameters within a
 "member" section are referenced normally (i.e., the section name is
-still "Groupname Membername", including the space).
+still "Groupname Membername", including the space) - the concept of
+Groups is to aid people building more complex configuration files.
 
 =cut
 
@@ -508,7 +527,16 @@ sub Groups	{
 
 =head2 GroupMembers ($group)
 
-Returns an array containing the members of specified $group.
+Returns an array containing the members of specified $group. Each element
+of the array is a section name. For example, given the sections
+
+  [Group Element 1]
+  ...
+
+  [Group Element 2]
+  ...
+
+GroupMembers would return ("Group Element 1", "Group Element 2").
 
 =cut
 
@@ -670,9 +698,7 @@ sub SetSectionComment
 	defined($section) || return undef;
 	@comment || return undef;
 	
-	if (not exists $self->{sCMT}{$section}) {
-		$self->{sCMT}{$section} = [];
-	}
+	$self->{sCMT}{$section} = [];
 	# At this point it's possible to have a comment for a section that
 	# doesn't exist. This comment will not get written to the INI file.
 	
@@ -744,17 +770,60 @@ sub SetParameterComment
 		$self->{pCMT}{$section} = {};
 	}
 	
-	if (not exists $self->{pCMT}{$section}{$parameter}) {
-		$self->{pCMT}{$section}{$parameter} = [];
-	}
+	$self->{pCMT}{$section}{$parameter} = [];
 	# Note that at this point, it's possible to have a comment for a parameter,
 	# without that parameter actually existing in the INI file.
 	
 	foreach my $comment_line (@comment) {
 		($comment_line =~ m/^\s*[#;]/) or ($comment_line = "# $comment_line");
-		push @{$self->{sCMT}{$section}{$parameter}}, $comment_line;
+		push @{$self->{pCMT}{$section}{$parameter}}, $comment_line;
 	}
 	return scalar @comment;
+}
+
+=head2 GetParameterComment ($section, $parameter)
+
+Gets the comment attached to a parameter.
+
+=cut
+
+sub GetParameterComment
+{
+	my $self = shift;
+	my $section = shift;
+	my $parameter = shift;
+	
+	defined($section) || return undef;
+	defined($parameter) || return undef;
+	
+	exists($self->{pCMT}{$section}) || return undef;
+	exists($self->{pCMT}{$section}{$parameter}) || return undef;
+	
+	my @comment = @{$self->{pCMT}{$section}{$parameter}};
+	return (wantarray)?@comment:join " ", @comment;
+}
+
+=head2 DeleteParameterComment ($section, $parameter)
+
+Deletes the comment attached to a parameter.
+
+=cut
+
+sub DeleteParameterComment
+{
+	my $self = shift;
+	my $section = shift;
+	my $parameter = shift;
+	
+	defined($section) || return undef;
+	defined($parameter) || return undef;
+	
+	# If the parameter doesn't exist, our goal has already been achieved
+	exists($self->{pCMT}{$section}) || return 1;
+	exists($self->{pCMT}{$section}{$parameter}) || return 1;
+	
+	delete $self->{pCMT}{$section}{$parameter};
+	return 1;
 }
 
 =head2 GetParameterEOT ($section, $parameter)
@@ -1203,6 +1272,7 @@ sub TIEHASH {
 # Date      Modification                              Author
 # ----------------------------------------------------------
 # 2000Jun15 Fixed bugs in -default handler                JW
+# 2000Dec07 Fixed another bug in -deault handler          JW
 # ----------------------------------------------------------
 sub FETCH {
   my $self = shift;
@@ -1213,7 +1283,7 @@ sub FETCH {
   my $val = $self->{v}{$key};
   
   unless( defined $self->{v}{$key} ) {
-    $val = $self->{default}{$key} if defined $self->{default};
+    $val = $self->{default}{$key} if ref $self->{default} eq 'HASH';
   } # end unless
 
   if( ref($val) eq 'ARRAY' ) {
@@ -1452,6 +1522,18 @@ modify it under the same terms as Perl itself.
 =head1 Change log
 
      $Log: IniFiles.pm,v $
+     Revision 2.10  2000/12/13 17:40:18  rbowen
+     Updated version number so that CPAN will stop being angry with us.
+
+     Revision 1.18  2000/12/08 00:45:35  grail
+     Change as requested by Jeremy Wadsack, for Bug 123146
+
+     Revision 1.17  2000/12/07 15:32:36  grail
+     Further patch to duplicate sections bug, and replacement of repeated values handling code.
+
+     Revision 1.14  2000/11/29 11:26:03  grail
+     Updates for task 22401 (no more reloadsig) and 22402 (Group and GroupMember doco)
+
      Revision 1.13  2000/11/28 12:41:42  grail
      Added test for being able to add sections with wierd names like section|version2
 
