@@ -1,80 +1,69 @@
+use strict;
+use Test;
 use Config::IniFiles;
-print "1..$t\n";
+
+BEGIN { plan tests => 9 }
+
+my ($en, $ini, $success);
 
 # test 1
-$t = 1;
 # print "Empty list when no groups ........ ";
 $en = new Config::IniFiles( -file => 't/en.ini' );
-if( scalar($en->Groups) == 0 ) {
-	print "ok $t\n";
-} else {
-	print "not ok $t\n";
-}
+ok( scalar($en->Groups) == 0 );
 
 # test 2
-$t++;
 # print "Creating new object, no file ..... ";
-if ($ini = new Config::IniFiles) {
-	print "ok $t\n";
-} else {
-	print "not ok $t\n";
-}
+ok($ini = new Config::IniFiles);
 
 # test 3
-$t++;
 # print "Setting new file name .............";
-if ($ini->SetFileName("t/newfile.ini")) {
-	print "ok $t\n";
-} else {
-	print "not ok $t\n";
-}
+ok($ini->SetFileName("t/newfile.ini"));
 
 # test 4
-$t++;
 # print "Saving under new file name ........";
 if ($ini->RewriteConfig()) {
 	if ( -f "t/newfile.ini" ) {
-		print "ok $t\n";
+		$success = 1;
 	} else {
-		print "not ok $t\n";
+		$success = 0;
 	}
 } else {
-	print "not ok $t\n";
+	$success = 0;
 }
+ok($success);
 
 # test 5
-$t++;
 # print "SetSectionComment .................";
 $ini->newval("Section1", "Parameter1", "Value1");
 my @section_comment = ("Line 1 of section comment.", "Line 2 of section comment", "Line 3 of section comment");
-if ($ini->SetSectionComment("Section1", @section_comment)) {
-	print "ok $t\n";
-} else {
-	print "not ok $t\n";
-}
+ok($ini->SetSectionComment("Section1", @section_comment));
 
 # test 6
-$t++;
 # print "GetSectionComment .................";
 my @comment;
 if (@comment = $ini->GetSectionComment("Section1")) {
 	if ((join "\n", @comment) eq ("# Line 1 of section comment.\n# Line 2 of section comment\n# Line 3 of section comment")) {
-		print "ok $t\n";
+		$success = 1;
 	} else {
-		print "not ok $t\n";
+		$success = 0;
 	}
 } else {
-	print "not ok $t\n";
+	$success = 0;
 }
+ok($success);
 
 # test 7
-$t++;
 # print "DeleteSectionComment ..............";
 $ini->DeleteSectionComment("Section1");
-if (defined $ini->GetSectionComment("Section1")) {
-	print "not ok $t\n";
-} else {
-	print "ok $t\n";
-}
+ok(not defined $ini->GetSectionComment("Section1"));
 
-BEGIN { $t = 7 }
+# test 8
+# DeleteSection
+$ini->DeleteSection( 'Section1' );
+ok( not $ini->Parameters( 'Section1' ) );
+
+# test 9
+# Delete entire config
+$ini->Delete();
+ok( not $ini->Sections() );
+
