@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = 0.08;
+$Config::IniFiles::VERSION = 0.09;
 use Carp;
 use strict;
 require 5.004;
@@ -1146,16 +1146,31 @@ own backup.
           ->{v}{$section}{$parm} = $value   OR  \@values
           ->{startup_settings} = \%orginal_object_parameters
 
-=head1 AUTHOR
+=head1 AUTHOR and ACKNOWLEDGEMENTS
 
 The original code was written by Scott Hutton.
 It has since been taken over by Rich Bowen,
 with many contributions from various other people.
 
+In particular, special thanks go to (in roughly chronological order):
+
+Bernie Cosell, Alan Young, Alex Satrapa, Mike Blazer, Wilbert van de Pieterman,
+Steve Campbell, Robert Konigsberg, Scott Dellinger, R. Bernstein,
+Jeremy Wadsack, Daniel Winkelmann, Pires Claudio,  and Adrian Phillips.
+
+Geez, that's a lot of people.
+
+If you want someone to bug about this, that would be:
+
 	Rich Bowen <rbowen@rcbowen.com>
+
+If you want more information, or want to participate, go to:
+
 	http://dev.rcbowen.com/iniconf/
 
 This program is free software; you can redistribute it and/or 
 modify it under the same terms as Perl itself.
 
 =cut
+
+
