@@ -1,6 +1,8 @@
 NAME
     Config::IniFiles - A module for reading .ini-style configuration files.
 
+         $Header: /usr/local/cvs/config_inifiles/README,v 1.3 2000/09/21 11:20:05 rbowen Exp $
+
 SYNOPSIS
       use Config::IniFiles;
       my $cfg = new Config::IniFiles( -file => "/path/configfile.ini" );
@@ -111,7 +113,9 @@ METHODS
 
   val ($section, $parameter)
 
-    Returns the value of the specified parameter in section $section.
+    Returns the value of the specified parameter in section $section,
+    returns undef if no section or no parameter for the given section
+    exists.
 
     If you want a multi-line/value field returned as an array, just specify
     an array as the receiver:
@@ -140,13 +144,18 @@ METHODS
 
     Forces the config file to be re-read. Also see the *-reloadsig* option
     to the new method for a way to connect this method to a signal (such as
-    SIGHUP).
+    SIGHUP). Returns undef if the file can not be opened.
 
   Sections
 
     Returns an array containing section names in the configuration file. If
     the *nocase* option was turned on when the config object was created,
     the section names will be returned in lowercase.
+
+  Parameters ($sectionname)
+
+    Returns an array containing the parameters contained in the specified
+    section.
 
   Groups
 
@@ -164,11 +173,6 @@ METHODS
 
     Returns an array containing the members of specified $group.
 
-  Parameters ($sectionname)
-
-    Returns an array containing the parameters contained in the specified
-    section.
-
   WriteConfig ($filename)
 
     Writes out a new copy of the configuration file. A temporary file
@@ -180,10 +184,63 @@ METHODS
     Same as WriteConfig, but specifies that the original configuration file
     should be rewritten.
 
+  SetFileName ($filename)
+
+    If you created the Config::IniFiles object without initialising from a
+    file, or if you just want to change the name of the file to use for
+    ReadConfig/RewriteConfig from now on, use this method.
+
+    Returns $filename if that was a valid name, undef otherwise.
+
+  SetSectionComment($section, @comment)
+
+    Sets the comment for section $section to the lines contained in
+    @comment. Each comment line will be prepended with "#" if it doesn't
+    already have a comment character (ie: if $line !~ m/^\s*[#;]/)
+
+    To clear a section comment, use DeleteSectionComment ($section)
+
+  GetSectionComment ($section)
+
+    Returns a list of lines, being the comment attached to section $section.
+    In scalar context, returns a string containing the lines of the comment
+    separated by newlines.
+
+    The lines are presented as-is, with whatever comment character was
+    originally used on that line.
+
+  DeleteSectionComment ($section)
+
+    Removes the comment for the specified section.
+
+  SetParameterComment ($section, $parameter, @comment)
+
+    Sets the comment attached to a particular parameter.
+
+    Any line of @comment that does not have a comment character will be
+    prepended with "#".
+
+  GetParameterEOT ($section, $parameter)
+
+    Accessor method for the EOT text (in fact, style) of the specified
+    parameter. If any text is used as an EOT mark, this will be returned. If
+    the parameter was not recorded using HERE style multiple lines,
+    GetParameterEOT returns undef.
+
+  SetParameterEOT ($section, $EOT)
+
+    Accessor method for the EOT text for the specified parameter. Sets the
+    HERE style marker text to the value $EOT. Once the EOT text is set, that
+    parameter will be saved in HERE style.
+
+    To un-set the EOT text, use DeleteParameterEOT ($section, $parameter).
+
+  DeleteParameterEOT ($section, $parameter)
+
 USAGE -- Tied Hash
   tie $ini, 'Config::Inifiles', (-file=>$filename, [-option=>value ...] )
 
-    Using `tie', you can tie a hash to a Config::IniFiles object. This
+    Using 'tie', you can tie a hash to a Config::IniFiles object. This
     creates a new object which you can access through your hash, so you use
     this instead of the new method. This actually creates a hash of hashes
     to access the values in the .ini-file.
@@ -203,7 +260,7 @@ USAGE -- Tied Hash
     methods.
 
     For those methods that do not coincide with the hash paradigm, you can
-    use the Perl `tied' function to get at the underlying object tied to the
+    use the Perl 'tied' function to get at the underlying object tied to the
     hash and call methods on that object. For example, to write the hash out
     to a new ini file, you would do something like this:
 
@@ -222,13 +279,6 @@ USAGE -- Tied Hash
 
       @lines = split( "$\", $ini{section}{multi_line_parameter} );
 
-  %hash = %{$ini{$section}}
-
-    Using the tie interface, you can copy whole sections of the ini file
-    into another hash. Note that this makes a copy of the entire section.
-    The new hash in no longer tied to the ini file, In particular, this
-    means -default and -nocase settings will not apply to `%hash'.
-
   $ini{$section}{$parameter} = $value;
 
     Sets the value of $parameter in $section to value given. through the
@@ -239,40 +289,60 @@ USAGE -- Tied Hash
 
      $ini{$section}{$parameter} = [$value1, $value2, ...];
 
+    However, Perl does not seem to extend autovivification to tied hashes.
+    That means that if you try to say
+
+      $ini{new_section}{new_paramters} = $val;
+
+    and the section 'new_section' does not exist, then Perl won't properly
+    create it. In order to work around this you will need to create a hash
+    reference in that section and then assign the parameter value. Something
+    like this should do nicely:
+
+      $ini{new_section} = {};
+      $ini{new_section}{new_paramters} = $val;
+
+  %hash = %{$ini{$section}}
+
+    Using the tie interface, you can copy whole sections of the ini file
+    into another hash. Note that this makes a copy of the entire section.
+    The new hash in no longer tied to the ini file, In particular, this
+    means -default and -nocase settings will not apply to '%hash'.
+
   $ini{$section} = {}; %{$ini{$section}} = %parameters;
 
     Through the hash interface, you have the ability to replace the entire
     section with a new set of parameters. This call will fail, however, if
     the argument passed in NOT a hash reference. You must use both lines, as
     shown above so that Perl recognizes the section as a hash reference
-    context before COPYing over the values from your `%parameters' hash.
+    context before COPYing over the values from your '%parameters' hash.
 
   delete $ini{$section}{$parameter}
 
-    When tied to a hash, you can use the Perl `delete' function to
+    When tied to a hash, you can use the Perl 'delete' function to
     completely remove a parameter from a section.
 
   delete $ini{$section}
 
     The tied interface also allows you to delete an entire section from the
-    ini file using the Perl `delete' function.
+    ini file using the Perl 'delete' function.
 
   $ini = ();
 
     If you really want to delete all the items in the ini file, this will do
     it. Of course, the changes won't be written to the actual file unless
-    you call ReWriteFile on the object tied to the hash.
+    you call RewriteConfig on the object tied to the hash.
 
   Parameter names
 
     my @keys = keys %{$ini{$section}}
     while (($k, $v) = each %{$ini{$section}}) {...}
     if( exists %{$ini{$section}}, $parameter ) {...}
-    When tied to a hash, you use the Perl `keys' and `each' functions to
-    iteratively list the parameters (`keys') or parameters and their values
-    (`each') in a given section.
+    When tied to a hash, you use the Perl 'keys' and 'each' functions to
+    iteratively list the parameters ('keys') or parameters and their values
+    ('each') in a given section.
 
-    You can also use the Perl `exists' function to see if a parameter is
+    You can also use the Perl 'exists' function to see if a parameter is
     defined in a given section.
 
     Note that none of these will return parameter names that are part if the
@@ -285,10 +355,10 @@ USAGE -- Tied Hash
     keys %ini, $section
     while (($k, $v) = each %ini) {...}
     if( exists %ini, $section ) {...}
-    When tied to a hash, you use the Perl `keys' and `each' functions to
+    When tied to a hash, you use the Perl 'keys' and 'each' functions to
     iteratively list the sections in the ini file.
 
-    You can also use the Perl `exists' function to see if a section is
+    You can also use the Perl 'exists' function to see if a section is
     defined in the file.
 
 DIAGNOSTICS
@@ -308,26 +378,138 @@ BUGS
        own backup.
 
 Data Structure
-      $iniconf->{cf} = "config_file_name"
-              ->{EOT}{$sect}{$parm} = "end of text string"
-              ->{firstload} = 0
-              ->{group}{$group} = \@group_members
-              ->{nocase} = 0
-              ->{parms}{$section} = \@section_parms
-              ->{pCMT}{$section}{$parm} = \@comment_lines
-              ->{reloadwarn} = 0
-              ->{sCMT}{$section} = \@comment_lines
-              ->{sects} = \@sections
-              ->{v}{$section}{$parm} = $value   OR  \@values
-              ->{startup_settings} = \%orginal_object_parameters
+    Note that this is only a reference for the package maintainers - one of
+    the upcoming revisions to this package will include a total clean up of
+    the data structure.
 
-AUTHOR
+      $iniconf->{cf} = "config_file_name"
+              ->{startup_settings} = \%orginal_object_parameters
+              ->{firstload} = 0
+              ->{nocase} = 0
+              ->{reloadwarn} = 0
+              ->{sects} = \@sections
+              ->{sCMT}{$section} = \@comment_lines
+              ->{group}{$group} = \@group_members
+              ->{parms}{$section} = \@section_parms
+              ->{EOT}{$sect}{$parm} = "end of text string"
+              ->{pCMT}{$section}{$parm} = \@comment_lines
+              ->{v}{$section}{$parm} = $value   OR  \@values
+
+AUTHOR and ACKNOWLEDGEMENTS
     The original code was written by Scott Hutton. It has since been taken
     over by Rich Bowen, with many contributions from various other people.
 
+    In particular, special thanks go to (in roughly chronological order):
+
+    Bernie Cosell, Alan Young, Alex Satrapa, Mike Blazer, Wilbert van de
+    Pieterman, Steve Campbell, Robert Konigsberg, Scott Dellinger, R.
+    Bernstein, Jeremy Wadsack, Daniel Winkelmann, Pires Claudio, and Adrian
+    Phillips.
+
+    Geez, that's a lot of people.
+
+    If you want someone to bug about this, that would be:
+
             Rich Bowen <rbowen@rcbowen.com>
+
+    If you want more information, or want to participate, go to:
+
             http://dev.rcbowen.com/iniconf/
+
+    Please send bug reports to iniconf@rcbowen.com
 
     This program is free software; you can redistribute it and/or modify it
     under the same terms as Perl itself.
+
+Change log
+         $Log: README,v $
+         Revision 1.3  2000/09/21 11:20:05  rbowen
+         README
+
+         Revision 1.7  2000/09/21 11:19:17  rbowen
+         Mostly documentation changes. I moved the change log into the POD rather
+         than having it in a separate Changes file. This allows people to see the
+         changes in the Readme before they download the module. Now I just
+         need to make sure I remember to regenerate the Readme every time I do
+         a commit.
+
+         1.6 September 19, 2000 by JW, AS
+         * Applied several patches submitted to me by Jeremy and Alex.
+         * Changed version number to the CVS version number, so that I won't
+         have to think about changing it ever again. Big version change
+         should not be taken as a huge leap forward.
+
+         0.12 September 13, 2000 by JW/WADG
+         * Added documentation to clarify autovivification issues when 
+         creating new sections
+         * Fixed version number (Oops!)
+
+         0.11 September 13, 2000 by JW/WADG
+         * Applied patch to Group and GroupMembers functions to return empty
+         list when no groups are present (submitted by John Bass, Sep 13)
+
+         0.10 September 13, 2000 by JW/WADG
+         * Fixed reference in POD to ReWriteFile. changes to RewriteConfig
+         * Applied patch for failed open bug submitted by Mordechai T. Abzug Aug 18
+         * Doc'd behavior of failed open
+         * Removed planned SIG testing from test.pl as SIGs have been removed
+         * Applied patch from Thibault Deflers to fix bug in parameter list
+         when a parameter value is undef
+
+         0.09
+         Hey! Where's the change log for 0.09?
+
+         0.08
+         2000-07-30  Adrian Phillips  <adrianp@powertech.no>
+ 
+         * test.pl: Fixed some tests which use $\, and made those that try
+         to check a non existant val check against ! defined.
+
+         * IniFiles.pm: hopefully fixed use of $\ when this is unset
+         (problems found when running tests with -w).  Similar problem with
+         $/ which can be undefined and trying to return a val which does
+         not exist. Modified val docs section to indicate a undef return
+         when this occurs.
+
+         0.07
+         Looks like we missed a change log for 0.07. Bummer.
+
+         0.06 Sun Jun 25, 2000 by Daniel Winkelmann
+         * Patch for uninitialized value bug in newval and setval
+     
+         0.05 Sun Jun 18, 2000 by RBOW
+         * Added something to shut up -w on VERSIONS
+         * Removed unused variables
+
+         0.04 Thu Jun 15 - Fri Jun 16, 2000 by JW/WADG
+         * Added support for -import option on ->new
+         * Added support for tying a hash
+         * Edited POD for grammer, clarity and updates
+         * Updated test.pl file
+         * Fixed bug in multiline/single line output
+         * Fixed bug in default handling with tie interface
+         * Added bugs to test.pl for regression
+         * Fixed bug in {group} vs. {groups} property (first is valid)
+         * Fixed return value for empty {sects} or {parms}{$sect} in
+         Sections and Parameters methods
+
+         0.03 Thu Jun 15, 2000 by RBOW
+         * Modifications to permit 'use strict', and to get 'make test' working
+         again.
+
+         0.02 Tue Jun 13, 2000 by RBOW
+         * Fixed bug reported by Bernie Cosell - Sections, Parameters, 
+         and GroupMembers return undef if there are no sections,
+         parameters, or group members. These functions now return
+         () if the particular value is undefined.
+         * Added some contributed documentation, from Alex Satrapa, explaining
+         how the internal data structure works. 
+         * Set up a project on SourceForge. (Not a change, but worth
+         noting).
+         * Added Groups method to return a list of section groups.
+
+         0.01  Mon Jun 12, 2000 by RBOW
+         Some general code cleanup, in preparation for changes to
+         come. Put up Majordomo mailing list and sent invitation to
+         various people to join it.
 

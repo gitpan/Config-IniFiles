@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 1.6 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 1.8 $))[1];
 use Carp;
 use strict;
 require 5.004;
@@ -9,6 +9,8 @@ require 5.004;
 =head1 NAME
 
 Config::IniFiles - A module for reading .ini-style configuration files.
+
+     $Header: /usr/local/cvs/config_inifiles/IniFiles.pm,v 1.8 2000/10/17 01:52:55 rbowen Exp $
 
 =head1 SYNOPSIS
 
@@ -660,7 +662,7 @@ sub SetSectionComment
 	my @comment = @_;
 
 	defined($section) || return undef;
-	defined(@comment) || return undef;
+	@comment || return undef;
 	
 	if (not exists $self->{sCMT}{$section}) {
 		$self->{sCMT}{$section} = [];
@@ -730,7 +732,7 @@ sub SetParameterComment
 
 	defined($section) || return undef;
 	defined($parameter) || return undef;
-	defined(@comment) || return undef;
+	@comment || return undef;
 	
 	if (not exists $self->{pCMT}{$section}) {
 		$self->{pCMT}{$section} = {};
@@ -1009,6 +1011,7 @@ sub FETCH {
 # Date      Modification                              Author
 # ----------------------------------------------------------
 # 2000Jun14 Fixed bug where wrong ref was saved           JW
+# 2000Oct09 Fixed possible but in %parms with defaults    JW
 # ----------------------------------------------------------
 sub STORE {
   my $self = shift;
@@ -1026,6 +1029,7 @@ sub STORE {
   $self->{parms}{$key} = [];
   $parms{-parms} = $self->{parms}{$key};
   $parms{-_current_value} = $ref;
+  delete $parms{default};
   $parms{-default} = $self->{v}{$parms{-default}} if defined $parms{-default} && defined $self->{v}{$parms{-default}};
   tie %{$self->{v}{$key}}, 'Config::IniFiles::_section', %parms;
 } # end STORE
@@ -1114,7 +1118,7 @@ sub DESTROY {
 
 ############################################################
 #
-# INTERAL PACKAGE: Config::IniFiles::_section
+# INTERNAL PACKAGE: Config::IniFiles::_section
 #
 # Description:
 # This package is used to provide a single-level TIEHASH
@@ -1435,4 +1439,99 @@ Please send bug reports to iniconf@rcbowen.com
 This program is free software; you can redistribute it and/or 
 modify it under the same terms as Perl itself.
 
+=head1 Change log
+
+     $Log: IniFiles.pm,v $
+     Revision 1.8  2000/10/17 01:52:55  rbowen
+     Patch from Jeremy. Fixed "defined" warnings.
+
+     Revision 1.7  2000/09/21 11:19:17  rbowen
+     Mostly documentation changes. I moved the change log into the POD rather
+     than having it in a separate Changes file. This allows people to see the
+     changes in the Readme before they download the module. Now I just
+     need to make sure I remember to regenerate the Readme every time I do
+     a commit.
+
+
+     1.6 September 19, 2000 by JW, AS
+     * Applied several patches submitted to me by Jeremy and Alex.
+     * Changed version number to the CVS version number, so that I won't
+     have to think about changing it ever again. Big version change
+     should not be taken as a huge leap forward.
+
+     0.12 September 13, 2000 by JW/WADG
+     * Added documentation to clarify autovivification issues when 
+     creating new sections
+     * Fixed version number (Oops!)
+
+     0.11 September 13, 2000 by JW/WADG
+     * Applied patch to Group and GroupMembers functions to return empty
+     list when no groups are present (submitted by John Bass, Sep 13)
+
+     0.10 September 13, 2000 by JW/WADG
+     * Fixed reference in POD to ReWriteFile. changes to RewriteConfig
+     * Applied patch for failed open bug submitted by Mordechai T. Abzug Aug 18
+     * Doc'd behavior of failed open
+     * Removed planned SIG testing from test.pl as SIGs have been removed
+     * Applied patch from Thibault Deflers to fix bug in parameter list
+     when a parameter value is undef
+
+     0.09
+     Hey! Where's the change log for 0.09?
+
+     0.08
+     2000-07-30  Adrian Phillips  <adrianp@powertech.no>
+ 
+     * test.pl: Fixed some tests which use $\, and made those that try
+     to check a non existant val check against ! defined.
+
+     * IniFiles.pm: hopefully fixed use of $\ when this is unset
+     (problems found when running tests with -w).  Similar problem with
+     $/ which can be undefined and trying to return a val which does
+     not exist. Modified val docs section to indicate a undef return
+     when this occurs.
+
+     0.07
+     Looks like we missed a change log for 0.07. Bummer.
+
+     0.06 Sun Jun 25, 2000 by Daniel Winkelmann
+     * Patch for uninitialized value bug in newval and setval
+     
+     0.05 Sun Jun 18, 2000 by RBOW
+     * Added something to shut up -w on VERSIONS
+     * Removed unused variables
+
+     0.04 Thu Jun 15 - Fri Jun 16, 2000 by JW/WADG
+     * Added support for -import option on ->new
+     * Added support for tying a hash
+     * Edited POD for grammer, clarity and updates
+     * Updated test.pl file
+     * Fixed bug in multiline/single line output
+     * Fixed bug in default handling with tie interface
+     * Added bugs to test.pl for regression
+     * Fixed bug in {group} vs. {groups} property (first is valid)
+     * Fixed return value for empty {sects} or {parms}{$sect} in
+     Sections and Parameters methods
+
+     0.03 Thu Jun 15, 2000 by RBOW
+     * Modifications to permit 'use strict', and to get 'make test' working
+     again.
+
+     0.02 Tue Jun 13, 2000 by RBOW
+     * Fixed bug reported by Bernie Cosell - Sections, Parameters, 
+     and GroupMembers return undef if there are no sections,
+     parameters, or group members. These functions now return
+     () if the particular value is undefined.
+     * Added some contributed documentation, from Alex Satrapa, explaining
+     how the internal data structure works. 
+     * Set up a project on SourceForge. (Not a change, but worth
+     noting).
+     * Added Groups method to return a list of section groups.
+
+     0.01  Mon Jun 12, 2000 by RBOW
+     Some general code cleanup, in preparation for changes to
+     come. Put up Majordomo mailing list and sent invitation to
+     various people to join it.
+
 =cut
+
