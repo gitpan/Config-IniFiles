@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 1.8 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 1.11 $))[1];
 use Carp;
 use strict;
 require 5.004;
@@ -10,7 +10,7 @@ require 5.004;
 
 Config::IniFiles - A module for reading .ini-style configuration files.
 
-     $Header: /usr/local/cvs/config_inifiles/IniFiles.pm,v 1.8 2000/10/17 01:52:55 rbowen Exp $
+     $Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 1.11 2000/11/24 21:20:11 rbowen Exp $
 
 =head1 SYNOPSIS
 
@@ -82,13 +82,19 @@ specify an array as the receiver:
 
 =head1 METHODS
 
-=head2 new (-file=>$filename, [-option=>value ...] )
+=head2 new ( [-option=>value ...] )
 
 Returns a new configuration object (or "undef" if the configuration
 file has an error).  One Config::IniFiles object is required per configuration
 file.  The following named parameters are available:
 
 =over 10
+
+=item I<-file>  filename
+
+Specifies a file to load the parameters from. If this option is not specified, (ie:
+you are creating a config file from scratch) you must specify a target file
+using SetFileName in order to save the parameters.
 
 =item I<-default> section
 
@@ -398,7 +404,7 @@ sub ReadConfig {
 	$self->{v}{$sect} = {};
       }
     }
-    elsif (($parm, $val) = /\s*([\S\s]+?)\s*=\s*(.*)/) {	# new parameter
+    elsif (($parm, $val) = /\s*([^=]+?)\s*=\s*(.*)/) {	# new parameter
       $parm = lc($parm) if $nocase;
       $self->{pCMT}{$sect}{$parm} = [@cmts];
       @cmts = ( );
@@ -1424,17 +1430,21 @@ Bernie Cosell, Alan Young, Alex Satrapa, Mike Blazer, Wilbert van de Pieterman,
 Steve Campbell, Robert Konigsberg, Scott Dellinger, R. Bernstein,
 Jeremy Wadsack, Daniel Winkelmann, Pires Claudio,  and Adrian Phillips.
 
-Geez, that's a lot of people.
+Geez, that's a lot of people. And apologies to the folks I missed.
 
 If you want someone to bug about this, that would be:
 
-	Rich Bowen <rbowen@rcbowen.com>
+	Rich Bowen <rbowen at rcbowen dot com>
 
 If you want more information, or want to participate, go to:
 
-	http://dev.rcbowen.com/iniconf/
+	http://sourceforge.net/projects/config-inifiles/
 
-Please send bug reports to iniconf@rcbowen.com     
+Please send bug reports to config-inifiles-bugs@lists.sourceforge.net
+
+Development discussion occurs on the mailing list
+config-inifiles-dev@lists.sourceforge.net, which you can subscribe
+to by going to the project web site (link above).
 
 This program is free software; you can redistribute it and/or 
 modify it under the same terms as Perl itself.
@@ -1442,6 +1452,20 @@ modify it under the same terms as Perl itself.
 =head1 Change log
 
      $Log: IniFiles.pm,v $
+     Revision 1.11  2000/11/24 21:20:11  rbowen
+     Resolved SourceForge bug #122445 - a parameter should be split from its value on the first = sign encountered, not on the last one. Added test suite to test this, and put test case in test.ini
+
+     Revision 1.10  2000/11/24 20:40:58  rbowen
+     Updated MANIFEST to have file list of new files in t/
+     Updated IniFiles.pm to have mention of sourceforge addresses, rather than rcbowen.com addresses
+     Regenerated README from IniFiles.pm
+
+     Revision 1.9  2000/11/23 05:08:08  grail
+     Fixed documentation for bug 122443 - Check that INI files can be created from scratch.
+
+     Revision 1.1.1.1  2000/11/10 03:04:01  rbowen
+     Initial checkin of the Config::IniFiles source to SourceForge
+
      Revision 1.8  2000/10/17 01:52:55  rbowen
      Patch from Jeremy. Fixed "defined" warnings.
 
