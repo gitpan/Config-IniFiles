@@ -1,6 +1,6 @@
 #[JW for editor]:mode=perl:tabSize=8:indentSize=2:noTabs=true:indentOnEnter=true:
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 2.24 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 2.25 $))[1];
 require 5.004;
 use strict;
 use Carp;
@@ -8,7 +8,7 @@ use Symbol 'gensym','qualify_to_ref';   # For the 'any data type' hack
 
 @Config::IniFiles::errors = ( );
 
-#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.24 2001/12/07 10:03:06 wadg Exp $
+#	$Header: /cvsroot/config-inifiles/config-inifiles/IniFiles.pm,v 2.25 2001/12/12 20:44:48 wadg Exp $
 
 =head1 NAME
 
@@ -1537,13 +1537,15 @@ sub _make_filehandle {
   # with modification for this module. Thanks Lincoln!
   #
   
-#  no strict 'refs';
+  no strict 'refs';
   my $thing = shift;
   return $thing if defined(fileno $thing);
+#  return $thing if defined($thing) && ref($thing) && defined(fileno $thing);
   
   # otherwise try qualifying it into caller's package
   my $fh = qualify_to_ref($thing,caller(1));
   return $fh if defined(fileno $fh);
+#  return $fh if defined($thing) && ref($thing) && defined(fileno $fh);
   
   # otherwise treat it as a file to open
   $fh = gensym;
@@ -1898,6 +1900,9 @@ modify it under the same terms as Perl itself.
 =head1 Change log
 
      $Log: IniFiles.pm,v $
+     Revision 2.25  2001/12/12 20:44:48  wadg
+     Update to bring CVS version in synch
+
      Revision 2.24  2001/12/07 10:03:06  wadg
      222444 Abilite to load from arbitrary source
 
