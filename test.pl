@@ -6,7 +6,7 @@
 # Change 1..1 below to 1..last_test_to_print .
 # (It may become useful if the test is moved to ./t subdirectory.)
 
-BEGIN { $| = 1; print "1..29\n"; }
+BEGIN { $| = 1; print "1..30\n"; }
 END {print "not ok 1\n" unless $loaded;}
 use Config::IniFiles;
 $loaded = 1;
@@ -387,3 +387,68 @@ if( $en->Groups == () ) {
 	print "not ok $t\n";
 }
 
+# test 30
+$t++;
+print "Creating new object, no file ..... ";
+if ($ini = new Config::IniFiles) {
+	print "ok $t\n";
+} else {
+	print "not ok $t\n";
+}
+
+# test 31
+$t++;
+print "Setting new file name .............";
+if ($ini->SetFileName("newfile.ini")) {
+	print "ok $t\n";
+} else {
+	print "not ok $t\n";
+}
+
+# test 32
+$t++;
+print "Saving under new file name ........";
+if ($ini->RewriteConfig()) {
+	if ( -f "newfile.ini" ) {
+		print "ok $t\n";
+	} else {
+		print "not ok $t\n";
+	}
+} else {
+	print "not ok $t\n";
+}
+
+# test 33
+$t++;
+print "SetSectionComment .................";
+$ini->newval("Section1", "Parameter1", "Value1");
+my @section_comment = ("Line 1 of section comment.", "Line 2 of section comment", "Line 3 of section comment");
+if ($ini->SetSectionComment("Section1", @section_comment)) {
+	print "ok $t\n";
+} else {
+	print "not ok $t\n";
+}
+
+# test 34
+$t++;
+print "GetSectionComment .................";
+my @comment;
+if (@comment = $ini->GetSectionComment("Section1")) {
+	if ((join "\n", @comment) eq ("# Line 1 of section comment.\n# Line 2 of section comment\n# Line 3 of section comment")) {
+		print "ok $t\n";
+	} else {
+		print "not ok $t\n";
+	}
+} else {
+	print "not ok $t\n";
+}
+
+# test 35
+$t++;
+print "DeleteSectionComment ..............";
+$ini->DeleteSectionComment("Section1");
+if (defined $ini->GetSectionComment("Section1")) {
+	print "not ok $t\n";
+} else {
+	print "ok $t\n";
+}
