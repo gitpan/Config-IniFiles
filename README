@@ -154,7 +154,23 @@ METHODS
               always part of the allowed comment characters. Note: The given
               string is evaluated as a character class (i.e.: like
               "/[chars]/").
-
+    
+    *-allowcode* 0|1
+              Set -allowcode => 1 allows to use perl hooks within an ini 
+              configuration file. Such perl hooks enable you to call a perl 
+              sub or to access an environment variable within an ini 
+              file to set a parameter:
+                
+                [EXAMPLE]
+                logfile1=sub{ $ENV{'LOGFILE'}; }
+                logfile2=sub{ logfile(); }
+                heredoc=<<EOT
+                sub{ $ENV{'LOGFILE'}; }
+                sub{ logfile(); }
+                <<EOT
+                
+              Default behaviour is to allow perl code.
+              
   val ($section, $parameter [, $default] )
 
     Returns the value of the specified parameter ("$parameter") in section

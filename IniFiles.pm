@@ -1,5 +1,5 @@
 package Config::IniFiles;
-$Config::IniFiles::VERSION = (qw($Revision: 2.38 $))[1];
+$Config::IniFiles::VERSION = (qw($Revision: 2.39 $))[1];
 require 5.004;
 use strict;
 use Carp;
@@ -176,6 +176,22 @@ B<-commentchar> (see above) is always part of the allowed comment
 characters. Note: The given string is evaluated as a character class
 (i.e.: like C</[chars]/>).
 
+=item I<-allowcode> 0|1
+
+Set -allowcode => 1 allows to use perl hooks within a ini configuration file.
+Such perl hooks enable you to call a perl sub or to access an environment variable
+from within an ini file to set a parameter:
+
+[EXAMPLE]
+logfile1=sub{ $ENV{'LOGFILE'}; }
+logfile2=sub{ logfile(); }
+heredoc=<<EOT
+sub{ $ENV{'LOGFILE'}; }
+sub{ logfile(); }
+<<EOT
+
+Default behaviour is to allow perl code.
+
 =back
 
 =cut
@@ -212,7 +228,8 @@ sub new {
   my($k, $v);
   local $_;
   $self->{nocase} = 0;
-
+  $self->{allowcode} = 1;
+  
   # Handle known parameters first in this order, 
   # because each() could return parameters in any order
   if (defined ($v = delete $parms{'-import'})) {
@@ -239,6 +256,9 @@ sub new {
   }
   if (defined ($v = delete $parms{'-allowcontinue'})) {
     $self->{allowcontinue} = $v ? 1 : 0;
+  }
+  if (defined ($v = delete $parms{'-allowcode'})) {
+    $self->{allowcode} = $v ? 1 : 0;
   }
   if (defined ($v = delete $parms{'-commentchar'})) {
     if(!defined $v || length($v) != 1) {
@@ -290,7 +310,49 @@ sub new {
     return undef;
   }
 }
+###########################################
+#
+# eval perl hooks in Inifile values
+# GCARLS 04/29/2005
+sub eval_if_perl {
+###########################################
+    my($self, $value) = @_;
 
+    if(my $cref = $self->compile_if_perl($value)) {
+        return $cref->();
+    }
+
+    return $value;
+}
+
+###########################################
+#
+# compile perl-hooks in Inifile values
+# GCARLS 04/29/2005
+sub compile_if_perl {
+###########################################
+    my($self, $value) = @_;
+
+    if(defined $value && $value =~ /^\s*sub\s*{/ ) {
+        my $mask;
+        unless( $self->{allowcode} ) {
+            die "-allowcode => 0 setting " .
+                "prohibits Perl code in ini file";
+        }
+        if( $self->{allowcode} == 1 ) {
+
+            # eval without restriction
+            my $cref = eval "package main; $value" or 
+                die "Can't evaluate '$value' ($@)";
+            return $cref;
+        }
+        else {
+            die "Invalid value for -allowcode in __PACKAGE__ initialisation";
+        }
+    }
+
+    return undef;
+}
 =head2 val ($section, $parameter [, $default] )
 
 Returns the value of the specified parameter (C<$parameter>) in section 
@@ -311,7 +373,7 @@ otherwise the values will be joined using \n.
 
 sub val {
   my ($self, $sect, $parm, $def) = @_;
-
+  my ($elem, @ary);
   # Always return undef on bad parameters
   return undef if not defined $sect;
   return undef if not defined $parm;
@@ -330,15 +392,25 @@ sub val {
   
   # Return the value in the desired context
   if (wantarray and ref($val) eq "ARRAY") {
-    return @$val;
+    # GCARLS 04/29/2005
+    @ary=@$val; # save original values (probably perl code)
+    foreach $elem ( @ary ) {
+      $elem=$self->eval_if_perl($elem);
+    }
+    return @ary;
   } elsif (ref($val) eq "ARRAY") {
+  	# GCARLS 04/29/2005:
+  	@ary=@$val;
+  	foreach $elem ( @ary ) {
+           $elem=$self->eval_if_perl($elem);
+        }
   	if (defined ($/)) {
-	    return join "$/", @$val;
+	    return join "$/", @ary;
 	} else {
-		return join "\n", @$val;
+	    return join "\n", @ary;
 	}
   } else {
-    return $val;
+    return $self->eval_if_perl($val);
   }
 }
 

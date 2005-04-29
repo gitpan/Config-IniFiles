@@ -12,6 +12,7 @@ t/04import.t
 t/05hash.t
 t/06oo.t
 t/07misc.t
+t/08hook.t
 
 t/ca.ini
 t/en.ini
@@ -20,3 +21,5 @@ t/test.ini
 t/cmt.ini
 t/bad.ini
 t/blank.ini
+t/hook.ini
+META.yml                                 Module meta-data (added by MakeMaker)

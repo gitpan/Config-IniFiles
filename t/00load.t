@@ -63,7 +63,6 @@ if( open( CONFIG, "test.ini" ) ) {
   ok( 0 );
 }
 
-
 # Test 6
 # Write to a new file name and write to it
 if( open( CONFIG, "test.ini" ) ) {
@@ -72,7 +71,7 @@ if( open( CONFIG, "test.ini" ) ) {
   $ini->RewriteConfig();
   close CONFIG;
   # Now test opening and re-write to the same handle
-  if( open( CONFIG, "test01.ini" ) ) {
+  if( open( CONFIG, "+<test01.ini" ) ) {
     $ini = new Config::IniFiles -file => \*CONFIG;
     my $badname = scalar(\*CONFIG);
                                        # Have to use open/close because -e seems to be always true!
@@ -137,7 +136,6 @@ ok(!$@ && !defined($ini));
 $@ = '';
 eval { $ini = new Config::IniFiles -file => 'bad.ini' };
 ok(!$@ && !defined($ini) && @Config::IniFiles::errors);
-
 
 # Clean up when we're done
 unlink "test01.ini";
