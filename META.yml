@@ -1,10 +1,23 @@
-# http://module-build.sourceforge.net/META-spec.html
-#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
-name:         Config-IniFiles
-version:      2.39
-version_from: IniFiles.pm
-installdirs:  site
+---
+name: Config-IniFiles
+version: 2.43
+author: []
+abstract: A module for reading .ini-style configuration files.
+license: perl
+resources:
+  license: http://dev.perl.org/licenses/
 requires:
-
-distribution_type: module
-generated_by: ExtUtils::MakeMaker version 6.17
+  Carp: 0
+  Symbol: 0
+  strict: 0
+  warnings: 0
+build_requires:
+  File::Spec: 0
+provides:
+  Config::IniFiles:
+    file: lib/Config/IniFiles.pm
+    version: 2.43
+generated_by: Module::Build version 0.3
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2
