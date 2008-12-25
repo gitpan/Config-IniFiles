@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = "2.43";
+$VERSION = "2.44";
 
 require 5.004;
 use strict;
@@ -2221,13 +2221,6 @@ sub NEXTKEY  {
 sub DESTROY  {
   # my $self = shift
 } # end DESTROY
-
-# Eliminate annoying warnings
-if ($^W)	{
-	$Config::IniFiles::VERSION = $Config::IniFiles::VERSION;
-}
-
-
 
 1;
 
