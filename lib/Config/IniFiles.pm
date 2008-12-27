@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = "2.44";
+$VERSION = "2.45";
 
 require 5.004;
 use strict;
@@ -323,11 +323,11 @@ sub new {
     # .. no, because now it could be a handle, IO:: object or something else
     $self->{cf} = $v;
   }
-  if (defined ($v = delete $parms{'-default'})) {
-    $self->{default} = $v;
-  }
   if (defined ($v = delete $parms{'-nocase'})) {
     $self->{nocase} = $v ? 1 : 0;
+  }  
+  if (defined ($v = delete $parms{'-default'})) {
+    $self->{default} = $self->{nocase} ? lc($v) : $v;
   }
   if (defined ($v = delete $parms{'-reloadwarn'})) {
     $self->{reloadwarn} = $v ? 1 : 0;
@@ -801,7 +801,9 @@ sub ReadConfig {
 	    $foundeot = 1;
 	    last;
 	  } else {
-	    CORE::push(@val, $_);
+		# Untaint
+		/(.*)/ms; 
+        CORE::push(@val, $1);
 	  }
 	}
 	if (! $foundeot) {
@@ -1353,9 +1355,17 @@ sub OutputConfig {
         # The FETCH of a tied hash is never called in 
         # an array context, so generate a EOT multiline
         # entry if the entry looks to be multiline
-        my @val = split /[$ors]/, $val;
+        my @val = split /[$ors]/, $val, -1;
         if( @val > 1 ) {
           my $eotmark = $self->{EOT}{$sect}{$parm} || 'EOT';
+
+          # Make sure the $eotmark does not occur inside the string.
+          my @letters = ('A' .. 'Z');
+          while (index($val, $eotmark) >= 0)
+          {
+              $eotmark .= $letters[rand(@letters)];
+          }
+
           print "$parm= <<$eotmark$ors";
           print map "$_$ors", @val;
           print "$eotmark$ors";
@@ -2413,7 +2423,9 @@ modify it under the same terms as Perl itself.
 
 =cut
 
-eval <<'DEBUGGING_CODE' || die $@ if $ENV{HARNESS_ACTIVE}; 1;
+1;
+
+eval <<'DEBUGGING_CODE' || die $@ if $ENV{HARNESS_ACTIVE} && ! ${^TAINT}; 1;
 
 # Checks that the following relationships hold set-wise (e.g. ignoring order):
 #
@@ -2459,6 +2471,11 @@ sub Config::IniFiles::_assert_invariants {
 
 1;
 DEBUGGING_CODE
+
+=cut
+
+1;
+
 # Please keep the following within the last four lines of the file
 #[JW for editor]:mode=perl:tabSize=8:indentSize=2:noTabs=true:indentOnEnter=true:
 

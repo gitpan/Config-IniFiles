@@ -1,6 +1,6 @@
 ---
 name: Config-IniFiles
-version: 2.44
+version: 2.45
 author: []
 abstract: A module for reading .ini-style configuration files.
 license: perl
@@ -13,10 +13,11 @@ requires:
   warnings: 0
 build_requires:
   File::Spec: 0
+  Scalar::Util: 0
 provides:
   Config::IniFiles:
     file: lib/Config/IniFiles.pm
-    version: 2.44
+    version: 2.45
 generated_by: Module::Build version 0.31
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.2.html
