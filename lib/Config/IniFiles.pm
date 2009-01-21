@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = "2.46";
+$VERSION = "2.47";
 
 require 5.004;
 use strict;
@@ -1732,9 +1732,9 @@ Returns the value of $parameter in $section.
 Because of limitations in Perl's tie implementation,
 multiline values accessed through a hash will I<always> be returned 
 as a single value with each line joined by the default line 
-separator ($\). To break them apart you can simple do this:
+separator ($/). To break them apart you can simple do this:
 
-  @lines = split( "$\", $ini{section}{multi_line_parameter} );
+  @lines = split( "$/", $ini{section}{multi_line_parameter} );
 
 =head2 $ini{$section}{$parameter} = $value;
 
@@ -2103,7 +2103,7 @@ sub TIEHASH {
 #	$key	The name of the key whose value to get
 #
 # Description: Returns the value associated with $key. If
-# the value is a list, returns a list reference.
+# the value is a list, returns the list joined by $/.
 # ----------------------------------------------------------
 # Date      Modification                              Author
 # ----------------------------------------------------------
@@ -2114,7 +2114,7 @@ sub TIEHASH {
 sub FETCH {
 	my ($self, $key)=@_;
 	my @retval=$self->{config}->val($self->{section}, $key);
-	return (@retval <= 1) ? $retval[0] : \@retval;
+	return (@retval <= 1) ? $retval[0] : join($/, @retval);
 } # end FETCH
 
 
@@ -2435,53 +2435,6 @@ modify it under the same terms as Perl itself.
 =cut
 
 1;
-
-eval <<'DEBUGGING_CODE' || die $@ if $ENV{HARNESS_ACTIVE} && ! ${^TAINT}; 1;
-
-# Checks that the following relationships hold set-wise (e.g. ignoring order):
-#
-#  keys($self->{v}) = $self->{sects}
-#
-# And for every section $sect:
-#
-#  keys($self->{v}{sect}) = $self->{v}{params}
-#
-# This should be the case whenever control flows outside this module. Croaks
-# upon any error.
-sub Config::IniFiles::_assert_invariants {
-	my ($self)=@_;
-	my %set;
-	foreach my $sect (@{$self->{sects}}) {
-		croak "Non-lowercase section $sect" if ($self->{nocase} &&
-											  (lc($sect) ne $sect));
-		$set{$sect}++;
-	}
-	foreach my $sect (keys %{$self->{v}}) {
-		croak "Key $sect in \$self->{v} and not in \$self->{sects}" unless
-		  ($set{$sect}++);
-	}
-	grep { croak "Key $_ in \$self->{sects} and not in in \$self->{v}" unless
-	   $set{$_} eq 2 } (keys %set);
-
-	foreach my $sect (@{$self->{sects}}) {
-		%set=();
-
-		foreach my $parm (@{$self->{parms}{$sect}}) {
-			croak "Non-lowercase parameter $parm" if ($self->{nocase} &&
-													(lc($parm) ne $parm));
-			$set{$parm}++;
-		}
-		foreach my $parm (keys %{$self->{v}{$sect}}) {
-			croak "Key $parm in \$self->{v}{'$sect'} and not in \$self->{parms}{'$sect'}"
-			  unless ($set{$parm}++);
-		}
-		grep { croak "Key $_ in \$self->{parms}{'$sect'} and not in in \$self->{v}{'$sect'}"
-				 unless $set{$_} eq 2 } (keys %set);
-	}
-}
-
-1;
-DEBUGGING_CODE
 
 =cut
 
