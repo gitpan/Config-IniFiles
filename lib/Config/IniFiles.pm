@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = "2.47";
+$VERSION = "2.48";
 
 require 5.004;
 use strict;
@@ -369,6 +369,8 @@ sub new {
   $self->{allowed_comment_char} = ';' unless exists $self->{allowed_comment_char};
   # make sure that comment character is always allowed
   $self->{allowed_comment_char} .= $self->{comment_char};
+
+  $self->{_comments_at_end_of_file} = [];
 
   # Any other parameters are unkown
   while (($k, $v) = each %parms) {
@@ -854,6 +856,8 @@ sub ReadConfig {
 	  $self->AddSection($defaultsect);
   } # end if
 
+  $self->_SetEndComments(@cmts);
+
   $self->_rollback($fh);
   @Config::IniFiles::errors ? undef : 1;
 }
@@ -1299,85 +1303,90 @@ sub SetFileName {
 # should be set to 1 if writing only delta.
 
 sub OutputConfig {
-  my ($self, $delta) = @_;
+    my ($self, $delta) = @_;
 
-  my($sect, $parm, @cmts);
-  my $ors = $self->{line_ends} || $\ || "\n";		# $\ is normally unset, but use input by default
-  my $notfirst = 0;
-  local $_;
-  SECT: foreach $sect (@{$self->{$delta ? "mysects" : "sects"}}) {
-	if (!defined $self->{v}{$sect}) {
-		if ($delta) {
-			print "$self->{comment_char} [$sect] is deleted$ors";
-		} else {
-			warn "Weird unknown section $sect" if $^W;
-		}
-		next SECT;
+    my($sect, $parm, @cmts);
+    my $ors = $self->{line_ends} || $\ || "\n"; # $\ is normally unset, but use input by default
+    my $notfirst = 0;
+    local $_;
+    SECT:
+    foreach $sect (@{$self->{$delta ? "mysects" : "sects"}}) {
+        if (!defined $self->{v}{$sect}) {
+            if ($delta) {
+                print "$self->{comment_char} [$sect] is deleted$ors";
+            } else {
+                warn "Weird unknown section $sect" if $^W;
+            }
+            next SECT;
+        }
+        next unless defined $self->{v}{$sect};
+        print $ors if $notfirst;
+        $notfirst = 1;
+        if ((ref($self->{sCMT}{$sect}) eq 'ARRAY') &&
+            (@cmts = @{$self->{sCMT}{$sect}})) {
+            foreach (@cmts) {
+                print "$_$ors";
+            }
+        }
+        print "[$sect]$ors";
+        next unless ref $self->{v}{$sect} eq 'HASH';
+
+        PARM:
+        foreach $parm (@{$self->{$delta ? "myparms" : "parms"}{$sect}}) {
+            if (!defined $self->{v}{$sect}{$parm}) {
+                if ($delta) {
+                    print "$self->{comment_char} $parm is deleted$ors";
+                } else {
+                    warn "Weird unknown parameter $parm" if $^W;
+                }
+                next PARM;
+            }
+            if ((ref($self->{pCMT}{$sect}{$parm}) eq 'ARRAY') &&
+                (@cmts = @{$self->{pCMT}{$sect}{$parm}})) {
+                foreach (@cmts) {
+                    print "$_$ors";
+                }
+            }
+
+            my $val = $self->{v}{$sect}{$parm};
+            next if ! defined ($val); # No parameter exists !!
+            if (ref($val) eq 'ARRAY') {
+                my $eotmark = $self->{EOT}{$sect}{$parm} || 'EOT';
+                print "$parm= <<$eotmark$ors";
+                foreach (@{$val}) {
+                    print "$_$ors";
+                }
+                print "$eotmark$ors";
+            } elsif( $val =~ /[$ors]/ ) {
+                # The FETCH of a tied hash is never called in 
+                # an array context, so generate a EOT multiline
+                # entry if the entry looks to be multiline
+                my @val = split /[$ors]/, $val, -1;
+                if( @val > 1 ) {
+                    my $eotmark = $self->{EOT}{$sect}{$parm} || 'EOT';
+
+                    # Make sure the $eotmark does not occur inside the string.
+                    my @letters = ('A' .. 'Z');
+                    while (index($val, $eotmark) >= 0)
+                    {
+                        $eotmark .= $letters[rand(@letters)];
+                    }
+
+                    print "$parm= <<$eotmark$ors";
+                    print map "$_$ors", @val;
+                    print "$eotmark$ors";
+                } else {
+                    print "$parm=$val[0]$ors";
+                } # end if
+            } else {
+                print "$parm=$val$ors";
+            }
+        }
     }
-    next unless defined $self->{v}{$sect};
-    print $ors if $notfirst;
-    $notfirst = 1;
-    if ((ref($self->{sCMT}{$sect}) eq 'ARRAY') &&
-	(@cmts = @{$self->{sCMT}{$sect}})) {
-      foreach (@cmts) {
-	print "$_$ors";
-      }
+    foreach my $comment ($self->_GetEndComments()) {
+        print "$comment$ors";
     }
-    print "[$sect]$ors";
-    next unless ref $self->{v}{$sect} eq 'HASH';
-
-    PARM: foreach $parm (@{$self->{$delta ? "myparms" : "parms"}{$sect}}) {
-	   if (!defined $self->{v}{$sect}{$parm}) {
-		   if ($delta) {
-			   print "$self->{comment_char} $parm is deleted$ors";
-		   } else {
-			   warn "Weird unknown parameter $parm" if $^W;
-		   }
-		   next PARM;
-	   }
-      if ((ref($self->{pCMT}{$sect}{$parm}) eq 'ARRAY') &&
-	  (@cmts = @{$self->{pCMT}{$sect}{$parm}})) {
-	foreach (@cmts) {
-	  print "$_$ors";
-	}
-      }
-
-      my $val = $self->{v}{$sect}{$parm};
-      next if ! defined ($val);	# No parameter exists !!
-      if (ref($val) eq 'ARRAY') {
-        my $eotmark = $self->{EOT}{$sect}{$parm} || 'EOT';
-	print "$parm= <<$eotmark$ors";
-	foreach (@{$val}) {
-	  print "$_$ors";
-	}
-	print "$eotmark$ors";
-      } elsif( $val =~ /[$ors]/ ) {
-        # The FETCH of a tied hash is never called in 
-        # an array context, so generate a EOT multiline
-        # entry if the entry looks to be multiline
-        my @val = split /[$ors]/, $val, -1;
-        if( @val > 1 ) {
-          my $eotmark = $self->{EOT}{$sect}{$parm} || 'EOT';
-
-          # Make sure the $eotmark does not occur inside the string.
-          my @letters = ('A' .. 'Z');
-          while (index($val, $eotmark) >= 0)
-          {
-              $eotmark .= $letters[rand(@letters)];
-          }
-
-          print "$parm= <<$eotmark$ors";
-          print map "$_$ors", @val;
-          print "$eotmark$ors";
-        } else {
-           print "$parm=$val[0]$ors";
-        } # end if
-      } else {
-        print "$parm=$val$ors";
-      }
-    }
-  }
-  return 1;
+    return 1;
 }
 
 =head2 SetSectionComment($section, @comment)
@@ -1529,6 +1538,22 @@ sub SetParameterComment
 	# without that parameter actually existing in the INI file.
 	CORE::push @{$self->{pCMT}{$sect}{$parm}}, $self->_markup_comments(@comment);
 	return scalar @comment;
+}
+
+sub _SetEndComments
+{
+    my $self = shift;
+    my @comments = @_;
+
+    $self->{_comments_at_end_of_file} = \@comments;
+
+    return 1;
+}
+
+sub _GetEndComments {
+    my $self = shift;
+
+    return @{$self->{_comments_at_end_of_file}};
 }
 
 =head2 GetParameterComment ($section, $parameter)
@@ -1729,12 +1754,9 @@ ini file, you would do something like this:
 
 Returns the value of $parameter in $section. 
 
-Because of limitations in Perl's tie implementation,
-multiline values accessed through a hash will I<always> be returned 
-as a single value with each line joined by the default line 
-separator ($/). To break them apart you can simple do this:
-
-  @lines = split( "$/", $ini{section}{multi_line_parameter} );
+Multiline values accessed through a hash will be returned 
+as a list in list context and a concatenated value in scalar
+context.
 
 =head2 $ini{$section}{$parameter} = $value;
 
@@ -2103,7 +2125,7 @@ sub TIEHASH {
 #	$key	The name of the key whose value to get
 #
 # Description: Returns the value associated with $key. If
-# the value is a list, returns the list joined by $/.
+# the value is a list, returns a list reference.
 # ----------------------------------------------------------
 # Date      Modification                              Author
 # ----------------------------------------------------------
@@ -2114,7 +2136,7 @@ sub TIEHASH {
 sub FETCH {
 	my ($self, $key)=@_;
 	my @retval=$self->{config}->val($self->{section}, $key);
-	return (@retval <= 1) ? $retval[0] : join($/, @retval);
+	return (@retval <= 1) ? $retval[0] : \@retval;
 } # end FETCH
 
 
