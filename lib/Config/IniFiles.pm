@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = "2.50";
+$VERSION = "2.51";
 
 require 5.004;
 use strict;
@@ -456,6 +456,12 @@ a parameter C<$parameter> inside, not counting default values.
 
 sub exists {
 	my ($self, $sect, $parm)=@_;
+
+    if ($self->{nocase}) {
+        $sect = lc($sect);
+        $parm = lc($parm);
+    }
+    
 	return (exists $self->{v}{$sect}{$parm});
 }
 
