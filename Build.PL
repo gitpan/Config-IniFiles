@@ -9,6 +9,8 @@ use Test::Run::Builder;
 
 my $builder = Test::Run::Builder->new(
     'module_name' => "Config::IniFiles",
+    'license' => "perl",
+    dist_author => 'Shlomi Fish <shlomif@iglu.org.il>',
     'build_requires' =>
     {
         'File::Spec' => 0,
@@ -21,7 +23,27 @@ my $builder = Test::Run::Builder->new(
         'Symbol' => 0,
         'warnings' => 0,
     },
-    'license' => "perl",
+    create_makefile_pl => 'traditional',
+    meta_merge =>
+    {
+        resources =>
+        {
+            repository => "http://config-inifiles.svn.sourceforge.net/svnroot/config-inifiles/",
+            homepage => "https://sourceforge.net/projects/config-inifiles/",
+        },
+        keywords =>
+        [
+            "ini",
+            "files",
+            "config",
+            "configuration",
+            "ini files",
+            "windows",
+            "tie",
+            "pure-perl",
+            "tested",
+        ],
+    },
 );
 
 $builder->create_build_script;
