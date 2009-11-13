@@ -1,6 +1,6 @@
 ---
 name: Config-IniFiles
-version: 2.52
+version: 2.53
 author:
   - 'Shlomi Fish <shlomif@iglu.org.il>'
 abstract: A module for reading .ini-style configuration files.
@@ -9,19 +9,21 @@ resources:
   homepage: https://sourceforge.net/projects/config-inifiles/
   license: http://dev.perl.org/licenses/
   repository: http://config-inifiles.svn.sourceforge.net/svnroot/config-inifiles/
+build_requires:
+  File::Spec: 0
+  Scalar::Util: 0
 requires:
   Carp: 0
   Symbol: 0
   strict: 0
   warnings: 0
-build_requires:
-  File::Spec: 0
-  Scalar::Util: 0
+configure_requires:
+  Module::Build: 0.35
 provides:
   Config::IniFiles:
     file: lib/Config/IniFiles.pm
-    version: 2.52
-generated_by: Module::Build version 0.33
+    version: 2.53
+generated_by: Module::Build version 0.35
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
   version: 1.4

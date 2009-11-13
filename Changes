@@ -1,3 +1,14 @@
+Version 2.53:   ( Fri Nov 13 11:52:40 IST 2009 )
+------------------------------------------------
+
+* Converted t/01basic.t to Test::More and modernised it.
+* Converted t/02weird.t to Test::More and modernised it.
+* Converted t/04import.t to Test::More and modernised it.
+* Applied a patch from Steffen Heinrich (SHE) for:
+    - https://rt.cpan.org/Ticket/Display.html?id=51445
+    - included t/25line-endings.t
+        - modified a little.
+
 Version 2.52:   ( Sun Jun 28 16:16:09 IDT 2009 )
 ------------------------------------------------
 
@@ -236,7 +247,7 @@ Revision 2.29  2002/08/15 21:33:58  wadg
 - Made file parsing portable for s390/EBCDIC, etc. (Adam Fischler)
 - Fixed import bug with Perl 5.8.0 (Marek Rouchal)
 - Fixed precedence bug in WriteConfig (Luc St Louis)
-- Fixed broken group detection in SetGroupMember and RemoveGroupMember (Kay Röpke)
+- Fixed broken group detection in SetGroupMember and RemoveGroupMember (Kay RÃ¶pke)
 - Added line continuation character (/) support (Marek Rouchal)
 - Added configurable comment character support (Marek Rouchal)
 
