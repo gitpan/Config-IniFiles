@@ -1,6 +1,6 @@
 ---
 name: Config-IniFiles
-version: 2.53
+version: 2.54
 author:
   - 'Shlomi Fish <shlomif@iglu.org.il>'
 abstract: A module for reading .ini-style configuration files.
@@ -22,7 +22,7 @@ configure_requires:
 provides:
   Config::IniFiles:
     file: lib/Config/IniFiles.pm
-    version: 2.53
+    version: 2.54
 generated_by: Module::Build version 0.35
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
