@@ -7,23 +7,22 @@ use strict;
 use warnings;
 
 use Test::More tests => 17;
+
 use Config::IniFiles;
-use File::Spec;
+
+use lib "./t/lib";
+
+use Config::IniFiles::TestPaths;
 
 my $ors = $\ || "\n";
 my $irs = $/ || "\n";
 my ($ini, $value);
 
-sub t_file
-{
-    return File::Spec->catfile(File::Spec->curdir(), "t", @_);
-}
-
 # Load ini file and write as new file
 $ini = Config::IniFiles->new( -file => t_file("test.ini"));
 $ini->SetFileName(t_file("test03.ini"));
 $ini->SetWriteMode("0666");
-unlink t_file("test03.ini");
+t_unlink("test03.ini");
 $ini->RewriteConfig;
 $ini->ReadConfig;
 # TEST
@@ -185,5 +184,5 @@ ok (
 );
 
 # Clean up when we're done
-unlink t_file("test03.ini");
+t_unlink("test03.ini");
 

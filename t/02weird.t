@@ -1,28 +1,24 @@
 #!/usr/bin/perl
+
 use strict;
 use warnings;
 
 # Should be 6.
 use Test::More tests => 6;
+
 use Config::IniFiles;
 
 use lib "./t/lib";
-use Config::IniFiles::Debug;
 
-use File::Spec;
+use Config::IniFiles::Debug;
+use Config::IniFiles::TestPaths;
 
 my ($ini, $value);
 
-sub fn
-{
-    my $filename = shift;
 
-    return File::Spec->catfile(File::Spec->curdir(), "t", $filename);
-}
-
-$ini = Config::IniFiles->new(-file => fn("test.ini"));
+$ini = Config::IniFiles->new(-file => t_file("test.ini"));
 $ini->_assert_invariants();
-$ini->SetFileName(fn("test02.ini"));
+$ini->SetFileName(t_file("test02.ini"));
 $ini->SetWriteMode("0666");
 
 # print "Weird characters in section name . ";
@@ -66,7 +62,7 @@ ok(
 my %test;
 # TEST
 ok( (tie %test, 'Config::IniFiles'), "Tying is successful" ); 
-tied(%test)->SetFileName(fn('test02.ini')); 
+tied(%test)->SetFileName(t_file('test02.ini')); 
 
 # Test 6
 # Also with pipes when using tied interface using vlaue of 0
@@ -88,5 +84,5 @@ ok(
 );
 
 # Clean up when we're done
-unlink fn("test02.ini");
+t_unlink("test02.ini");
 
