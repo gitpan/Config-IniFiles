@@ -1,3 +1,11 @@
+Version 2.56:   ( Thu Dec 31 06:55:01 IST 2009 )
+------------------------------------------------
+
+* Hopefully fixed the skip() in t/07misc.t
+    - https://rt.cpan.org/Public/Bug/Display.html?id=53238
+    - It was skip($num, $label) instead of skip($label, $num) and it
+    lacked a "SKIP:" label.
+
 Version 2.55:   ( Tue Dec 22 17:42:59 IST 2009 )
 ------------------------------------------------
 
