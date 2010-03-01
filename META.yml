@@ -7,7 +7,7 @@ build_requires:
   Scalar::Util: 0
 configure_requires:
   Module::Build: 0.36
-generated_by: 'Module::Build version 0.3601'
+generated_by: 'Module::Build version 0.3603'
 keywords:
   - ini
   - files
@@ -26,7 +26,7 @@ name: Config-IniFiles
 provides:
   Config::IniFiles:
     file: lib/Config/IniFiles.pm
-    version: 2.56
+    version: 2.57
 requires:
   Carp: 0
   Symbol: 0
@@ -36,4 +36,4 @@ resources:
   homepage: https://sourceforge.net/projects/config-inifiles/
   license: http://dev.perl.org/licenses/
   repository: http://config-inifiles.svn.sourceforge.net/svnroot/config-inifiles/
-version: 2.56
+version: 2.57
