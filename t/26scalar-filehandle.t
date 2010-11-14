@@ -1,9 +1,12 @@
 #!/usr/bin/perl
 # This script is a regression test for:
-#
-# https://rt.cpan.org/Ticket/Display.html?id=45997
+# 
+# https://rt.cpan.org/Ticket/Display.html?id=54997
 #
 # Failure to read the ini file contents from a filehandle made out of a scalar
+#
+# <<< [patch] stat() on unopened filehandle warning thrown when using 
+# filehandle made from a scalar. >>>
 
 use Test::More;
 
@@ -15,9 +18,9 @@ use English qw(-no_match_vars);
 
 use Config::IniFiles;
 
-if ( ! eval { require IO::Scalar; } )
+if ( ! eval "require 5.008;" )
 {
-    plan skip_all => "IO::Scalar is not available";
+    plan skip_all => "We need filehandles made from scalar which is a feature of Perl above 5.8.x";
 }
 else
 {
