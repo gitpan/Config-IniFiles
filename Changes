@@ -1,3 +1,20 @@
+Version 2.62:     ( Fri Nov 19 15:31:36 IST 2010 )
+--------------------------------------------------
+
+* Applied a modified version of Steven Haryanto's commit
+ac6ace8bf09fabba4e6ea3b2826ff13cd30507bc :
+    - When writing config with fallback section, also omit the fallback 
+    section header, like the original file. Also, change
+    t/19param-found-outside-section.t a bit to not require IO::Scalar and use 
+    File::Temp instead (we are testing WriteConfig anyway).
+    - Shlomi Fish fixed unless'es to if's and converted a do { ... } if call to
+    a block conditional, as well as made the open statements on t/19param
+    more secure.
+
+* Add -nomultiline option.
+    -Applied a modified version of Steven Haryanto's commit
+    2181f438d40b54c290a2dda5627a244c6e467a7b
+
 Version 2.61:    ( Sun Nov 14 10:52:39 IST 2010 )
 -------------------------------------------------
 

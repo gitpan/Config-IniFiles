@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = '2.61';
+$VERSION = '2.62';
 
 require 5.004;
 use strict;
@@ -153,7 +153,7 @@ any of the following things:
     Setting=Another value
     EOT
     
-    $cfg = Config::IniFiles->new( -file => $ini_file_contents );
+    $cfg = Config::IniFiles->new( -file => \$ini_file_contents );
 
 
 If this option is not specified, (i.e. you are creating a config file from scratch) 
@@ -206,6 +206,8 @@ will be assumed as:
    [joe]
    name=Joseph
 
+Note that Config::IniFiles will also omit the fallback section header when
+outputing such configuration.
 
 =item I<-nocase> 0|1
 
@@ -306,6 +308,22 @@ or daemon application. The application is still responsible for determining
 when the object is to be reloaded.
 
 
+=item I<-nomultiline> 0|1
+
+Set -nomultiline => 1 to output multi-valued parameter as:
+
+ param=value1
+ param=value2
+
+instead of the default:
+
+ param=<<EOT
+ value1
+ value2
+ EOT
+
+As the later might not be compatible with all applications.
+
 =back
 
 =cut
@@ -320,10 +338,12 @@ sub new {
   my $self = bless {
 	default => '',
 	fallback =>undef,
+	fallback_used => 0,
 	imported =>undef,
 	v =>{},
 	cf => undef,
 	firstload => 1,
+	nomultiline => 0,
   }, $class;
 
   if( ref($parms{-import}) && ($parms{-import}->isa('Config::IniFiles')) ) {
@@ -362,11 +382,14 @@ sub new {
   if (defined ($v = delete $parms{'-reloadwarn'})) {
     $self->{reloadwarn} = $v ? 1 : 0;
   }
+  if (defined ($v = delete $parms{'-nomultiline'})) {
+    $self->{nomultiline} = $v ? 1 : 0;
+  }
   if (defined ($v = delete $parms{'-allowcontinue'})) {
     $self->{allowcontinue} = $v ? 1 : 0;
   }
   if (defined ($v = delete $parms{'-allowempty'})) {
-	  $self->{allowempty} = $v ? 1 : 0;
+     $self->{allowempty} = $v ? 1 : 0;
   }
   if (defined ($v = delete $parms{'-negativedeltas'})) {
 	  $self->{negativedeltas} = $v ? 1 : 0;
@@ -835,8 +858,11 @@ sub ReadConfig {
       @cmts = ();
     }
     elsif (($parm, $val) = /^\s*([^=]*?[^=\s])\s*=\s*(.*)$/) {	# new parameter
-		$sect = $self->{fallback}
-			if !defined($sect) && defined($self->{fallback});
+		if ((!defined($sect)) and defined($self->{fallback}))
+		{ 
+			$sect = $self->{fallback};
+			$self->{fallback_used}++;
+		}
 		if (!defined $sect) {
 			CORE::push(@Config::IniFiles::errors, sprintf('%d: %s', $lineno,
 				qq#parameter found outside a section#));
@@ -1385,7 +1411,13 @@ sub OutputConfig {
                 print "$_$ors";
             }
         }
-        print "[$sect]$ors";
+
+        if (!
+            ($self->{fallback_used} and $sect eq $self->{fallback})
+        )
+        {
+            print "[$sect]$ors";
+        }
         next unless ref $self->{v}{$sect} eq 'HASH';
 
         PARM:
@@ -1408,12 +1440,18 @@ sub OutputConfig {
             my $val = $self->{v}{$sect}{$parm};
             next if ! defined ($val); # No parameter exists !!
             if (ref($val) eq 'ARRAY') {
-                my $eotmark = $self->{EOT}{$sect}{$parm} || 'EOT';
-                print "$parm= <<$eotmark$ors";
-                foreach (@{$val}) {
-                    print "$_$ors";
+                if ($self->{nomultiline}) {
+                    foreach (@{$val}) {
+                        print "$parm=$_$ors";
+                    }
+                } else {
+                    my $eotmark = $self->{EOT}{$sect}{$parm} || 'EOT';
+                    print "$parm= <<$eotmark$ors";
+                    foreach (@{$val}) {
+                        print "$_$ors";
+                    }
+                    print "$eotmark$ors";
                 }
-                print "$eotmark$ors";
             } elsif( $val =~ /[$ors]/ ) {
                 # The FETCH of a tied hash is never called in 
                 # an array context, so generate a EOT multiline
@@ -1429,9 +1467,15 @@ sub OutputConfig {
                         $eotmark .= $letters[rand(@letters)];
                     }
 
-                    print "$parm= <<$eotmark$ors";
-                    print map "$_$ors", @val;
-                    print "$eotmark$ors";
+                    if ($self->{nomultiline}) {
+                        foreach (@{$val}) {
+                            print "$parm=$_$ors";
+                        }
+                    } else {
+                        print "$parm= <<$eotmark$ors";
+                        print map "$_$ors", @val;
+                        print "$eotmark$ors";
+                    }
                 } else {
                     print "$parm=$val[0]$ors";
                 } # end if
