@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = '2.66';
+$VERSION = '2.67';
 
 require 5.004;
 use strict;
@@ -1427,7 +1427,13 @@ should be set to 1 if writing only delta.
 sub _OutputParam {
     my ($self, $sect, $parm, $val, $ors, $end_comment, $output_cb) = @_;
 
-    if ((@$val <= 1) or $self->{nomultiline}) {
+    if (! @$val) {
+        # An empty variable - see:
+        # https://rt.cpan.org/Public/Bug/Display.html?id=68554
+        $output_cb->("$parm=");
+        $output_cb->("$ors");
+    }
+    elsif ((@$val == 1) or $self->{nomultiline}) {
         my $cnt = 0;
         foreach (@{$val}) {
             $cnt++;
