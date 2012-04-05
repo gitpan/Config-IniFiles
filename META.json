@@ -1,0 +1,70 @@
+{
+   "abstract" : "A module for reading .ini-style configuration files.",
+   "author" : [
+      "Shlomi Fish <shlomif@iglu.org.il>"
+   ],
+   "dynamic_config" : 1,
+   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.120630",
+   "keywords" : [
+      "ini",
+      "files",
+      "config",
+      "configuration",
+      "ini files",
+      "windows",
+      "tie",
+      "pure-perl",
+      "tested"
+   ],
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "Config-IniFiles",
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "File::Spec" : "0",
+            "List::Util" : "0",
+            "Scalar::Util" : "0",
+            "Test::More" : "0",
+            "base" : "0",
+            "strict" : "0",
+            "warnings" : "0"
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "Module::Build" : "0.36"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "Carp" : "0",
+            "Symbol" : "0",
+            "strict" : "0",
+            "warnings" : "0"
+         }
+      }
+   },
+   "provides" : {
+      "Config::IniFiles" : {
+         "file" : "lib/Config/IniFiles.pm",
+         "version" : "2.69"
+      }
+   },
+   "release_status" : "stable",
+   "resources" : {
+      "homepage" : "https://sourceforge.net/projects/config-inifiles/",
+      "license" : [
+         "http://dev.perl.org/licenses/"
+      ],
+      "repository" : {
+         "url" : "http://config-inifiles.svn.sourceforge.net/svnroot/config-inifiles/"
+      }
+   },
+   "version" : "2.69"
+}

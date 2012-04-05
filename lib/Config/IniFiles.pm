@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = '2.68';
+$VERSION = '2.69';
 
 require 5.004;
 use strict;
@@ -11,7 +11,7 @@ use Symbol 'gensym','qualify_to_ref';   # For the 'any data type' hack
 
 @Config::IniFiles::errors = ( );
 
-#	$Header: /home/shlomi/progs/perl/cpan/Config/IniFiles/config-inifiles-cvsbackup/config-inifiles/IniFiles.pm,v 2.41 2003-12-08 10:50:56 domq Exp $
+#   $Header: /home/shlomi/progs/perl/cpan/Config/IniFiles/config-inifiles-cvsbackup/config-inifiles/IniFiles.pm,v 2.41 2003-12-08 10:50:56 domq Exp $
 
 =head1 NAME
 
@@ -22,7 +22,7 @@ Config::IniFiles - A module for reading .ini-style configuration files.
   use Config::IniFiles;
   my $cfg = Config::IniFiles->new( -file => "/path/configfile.ini" );
   print "The value is " . $cfg->val( 'Section', 'Parameter' ) . "."
-  	if $cfg->val( 'Section', 'Parameter' );
+    if $cfg->val( 'Section', 'Parameter' );
 
 =head1 DESCRIPTION
 
@@ -346,6 +346,18 @@ L</SetParameterTrailingComment> and L</GetParameterTrailingComment>.
 
 =cut
 
+sub _nocase
+{
+    my $self = shift;
+
+    if (@_)
+    {
+        $self->{nocase} = (shift(@_) ? 1 : 0);
+    }
+
+    return $self->{nocase};
+}
+
 sub new {
   my $class = shift;
   my %parms = @_;
@@ -354,14 +366,14 @@ sub new {
   my @groups = ( );
 
   my $self = bless {
-	default => '',
-	fallback =>undef,
-	fallback_used => 0,
-	imported =>undef,
-	v =>{},
-	cf => undef,
-	firstload => 1,
-	nomultiline => 0,
+    default => '',
+    fallback =>undef,
+    fallback_used => 0,
+    imported =>undef,
+    v =>{},
+    cf => undef,
+    firstload => 1,
+    nomultiline => 0,
     handle_trailing_comment => 0,
   }, $class;
 
@@ -380,7 +392,7 @@ sub new {
   # Parse options
   my($k, $v);
   local $_;
-  $self->{nocase} = 0;
+  $self->_nocase(0);
 
   # Handle known parameters first in this order, 
   # because each() could return parameters in any order
@@ -390,13 +402,13 @@ sub new {
     $self->{cf} = $v;
   }
   if (defined ($v = delete $parms{'-nocase'})) {
-    $self->{nocase} = $v ? 1 : 0;
+    $self->_nocase($v);
   }  
   if (defined ($v = delete $parms{'-default'})) {
-    $self->{default} = $self->{nocase} ? lc($v) : $v;
+    $self->{default} = $self->_nocase ? lc($v) : $v;
   }
   if (defined ($v = delete $parms{'-fallback'})) {
-    $self->{fallback} = $self->{nocase} ? lc($v) : $v;
+    $self->{fallback} = $self->_nocase ? lc($v) : $v;
   }
   if (defined ($v = delete $parms{'-reloadwarn'})) {
     $self->{reloadwarn} = $v ? 1 : 0;
@@ -483,18 +495,30 @@ otherwise the values will be joined using \n.
 
 =cut
 
+sub _caseify {
+    my ($self, @refs) = @_;
+
+    if (not $self->_nocase)
+    {
+        return;
+    }
+
+    foreach my $ref (@refs) {
+        ${$ref} = lc(${$ref})
+    }
+
+    return;
+}
+
 sub val {
   my ($self, $sect, $parm, $def) = @_;
 
   # Always return undef on bad parameters
   return if not defined $sect;
   return if not defined $parm;
-  
-  if ($self->{nocase}) {
-    $sect = lc($sect);
-    $parm = lc($parm);
-  }
-  
+ 
+  $self->_caseify(\$sect, \$parm);
+
   my $val = defined($self->{v}{$sect}{$parm}) ?
     $self->{v}{$sect}{$parm} :
     $self->{v}{$self->{default}}{$parm};
@@ -512,11 +536,11 @@ sub val {
       return;
     }
   } elsif (ref($val) eq "ARRAY") {
-  	if (defined ($/)) {
-	    return join "$/", @$val;
-	} else {
-		return join "\n", @$val;
-	}
+    if (defined ($/)) {
+        return join "$/", @$val;
+    } else {
+        return join "\n", @$val;
+    }
   } else {
     return $val;
   }
@@ -532,14 +556,11 @@ a parameter C<$parameter> inside, not counting default values.
 =cut
 
 sub exists {
-	my ($self, $sect, $parm)=@_;
+    my ($self, $sect, $parm) = @_;
 
-    if ($self->{nocase}) {
-        $sect = lc($sect);
-        $parm = lc($parm);
-    }
-    
-	return (exists $self->{v}{$sect}{$parm});
+    $self->_caseify(\$sect, \$parm);
+
+    return (exists $self->{v}{$sect}{$parm});
 }
 
 
@@ -557,15 +578,12 @@ attempted. See B<newval> below to do this. Otherwise, it returns 1.
 =cut
 
 sub push {
-  my ($self, $sect, $parm, @vals)=@_;
+  my ($self, $sect, $parm, @vals) = @_;
 
   return undef if not defined $sect;
   return undef if not defined $parm;
 
-  if ($self->{nocase}) {
-    $sect = lc($sect);
-    $parm = lc($parm);
-  }
+  $self->_caseify(\$sect, \$parm);
 
   return undef if (! defined($self->{v}{$sect}{$parm}));
 
@@ -574,7 +592,7 @@ sub push {
   $self->_touch_parameter($sect, $parm);
 
   $self->{EOT}{$sect}{$parm} = 'EOT' if
-	(!defined $self->{EOT}{$sect}{$parm});
+    (!defined $self->{EOT}{$sect}{$parm});
 
   $self->{v}{$sect}{$parm} = [$self->{v}{$sect}{$parm}] unless
      (ref($self->{v}{$sect}{$parm}) eq "ARRAY");
@@ -604,16 +622,13 @@ sub setval {
   return undef if not defined $sect;
   return undef if not defined $parm;
 
-  if ($self->{nocase}) {
-    $sect = lc($sect);
-    $parm = lc($parm);
-  }
+  $self->_caseify(\$sect, \$parm);
 
   if (defined($self->{v}{$sect}{$parm})) {
-	$self->_touch_parameter($sect, $parm);
+    $self->_touch_parameter($sect, $parm);
     if (@val > 1) {
       $self->{v}{$sect}{$parm} = \@val;
-	  $self->{EOT}{$sect}{$parm} = 'EOT';
+      $self->{EOT}{$sect}{$parm} = 'EOT';
     } else {
       $self->{v}{$sect}{$parm} = shift @val;
     }
@@ -640,10 +655,7 @@ sub newval {
   return undef if not defined $sect;
   return undef if not defined $parm;
 
-  if ($self->{nocase}) {
-    $sect = lc($sect);
-    $parm = lc($parm);
-  }
+  $self->_caseify(\$sect, \$parm);
 
   $self->AddSection($sect);
 
@@ -674,10 +686,7 @@ sub delval {
   return undef if not defined $sect;
   return undef if not defined $parm;
 
-  if ($self->{nocase}) {
-    $sect = lc($sect);
-    $parm = lc($parm);
-  }
+  $self->_caseify(\$sect, \$parm);
 
   @{$self->{parms}{$sect}} = grep !/^\Q$parm\E$/, @{$self->{parms}{$sect}};
   $self->_touch_parameter($sect, $parm);
@@ -725,47 +734,47 @@ sub _deepcopy {
 
 # Internal method, gets the next line, taking proper care of line endings.
 sub _nextline {
-	my ($self, $fh)=@_;
-	local $_;
-	if (!exists $self->{line_ends}) {
-		# no $self->{line_ends} is a hint set by caller that we are at
-		# the first line (kludge kludge).
-		{
-			local $/=\1;
-			my $nextchar;
-			do {
-				$nextchar=<$fh>;
-				return undef if (!defined $nextchar);
-				$_ .= $nextchar;
-			} until (m/((\015|\012|\025|\n)$)/s);
-			$self->{line_ends}=$1;
-			if ($nextchar eq "\x0d") {
-				# peek at the next char
-				$nextchar = <$fh>;
-				if ($nextchar eq "\x0a") {
-					$self->{line_ends} .= "\x0a";
-				} else {
-					seek $fh, -1, 1;
-				}
-			}
-		}
+    my ($self, $fh)=@_;
+    local $_;
+    if (!exists $self->{line_ends}) {
+        # no $self->{line_ends} is a hint set by caller that we are at
+        # the first line (kludge kludge).
+        {
+            local $/=\1;
+            my $nextchar;
+            do {
+                $nextchar=<$fh>;
+                return undef if (!defined $nextchar);
+                $_ .= $nextchar;
+            } until (m/((\015|\012|\025|\n)$)/s);
+            $self->{line_ends}=$1;
+            if ($nextchar eq "\x0d") {
+                # peek at the next char
+                $nextchar = <$fh>;
+                if ($nextchar eq "\x0a") {
+                    $self->{line_ends} .= "\x0a";
+                } else {
+                    seek $fh, -1, 1;
+                }
+            }
+        }
 
-		# If there's a UTF BOM (Byte-Order-Mark) in the first
-		# character of the first line then remove it before processing
-		# (http://www.unicode.org/unicode/faq/utf_bom.html#22)
-		s/^﻿//;
+        # If there's a UTF BOM (Byte-Order-Mark) in the first
+        # character of the first line then remove it before processing
+        # (http://www.unicode.org/unicode/faq/utf_bom.html#22)
+        s/^﻿//;
 
-		return $_;
-	} else {
-		local $/=$self->{line_ends};
-		return scalar <$fh>;
-	}
+        return $_;
+    } else {
+        local $/=$self->{line_ends};
+        return scalar <$fh>;
+    }
 }
 
 # Internal method, closes or resets the file handle. To be called
 # whenever ReadConfig() returns.
 sub _rollback {
-	my ($self, $fh)=@_;
+    my ($self, $fh)=@_;
   # Only close if this is a filename, if it's
   # an open handle, then just roll back to the start
   if( !ref($self->{cf}) ) {
@@ -806,20 +815,22 @@ sub ReadConfig {
       # back down, maintaining the imported file names and our 
       # file name.
       # This is only needed on a re-load though
-	  $self->{imported}->ReadConfig() unless ($self->{firstload});
+      $self->{imported}->ReadConfig() unless ($self->{firstload});
 
-	  foreach my $field (qw(sects parms group v sCMT pCMT EOT)) {
-		  $self->{$field} = _deepcopy($self->{imported}->{$field});
-	  }
+      foreach my $field (qw(sects parms group v sCMT pCMT EOT)) {
+          $self->{$field} = _deepcopy($self->{imported}->{$field});
+      }
   } # end if
   
-  return 1 if (
-    (not exists $self->{cf}) or
-    (not defined $self->{cf}) or
-    ($self->{cf} eq '')
-  );
+  if (    (not exists $self->{cf})
+       or (not defined $self->{cf})
+       or ($self->{cf} eq '')
+  )
+  {
+      return 1;
+  }
   
-  my $nocase = $self->{nocase};
+  my $nocase = $self->_nocase;
   my $end_commenthandle = $self->{handle_trailing_comment};
 
   # If this is a reload and we want warnings then send one to the STDERR log
@@ -856,106 +867,104 @@ sub ReadConfig {
   local $_;
   delete $self->{line_ends}; # Marks start of parsing for _nextline()
   while ( defined($_ = $self->_nextline($fh)) ) {
-    s/(\015\012?|\012|\025|\n)$//;				# remove line ending char(s)
+    s/(\015\012?|\012|\025|\n)$//;              # remove line ending char(s)
     $lineno++;
-    if (/^\s*$/) {				# ignore blank lines
+    if (/^\s*$/) {              # ignore blank lines
       next;
     }
-    elsif (/^\s*[$allCmt]/) {			# collect comments
-		if ($self->{negativedeltas} &&
-			m/^$self->{comment_char} (.*) is deleted$/) {
-			my $todelete=$1;
-			if ($todelete =~ m/^\[(.*)\]$/) {
-				$self->DeleteSection($1);
-			} else {
-				$self->delval($sect, $todelete);
-			}
-		} else {
-			CORE::push(@cmts, $_);
-		}
-		next;
+    elsif (/^\s*[$allCmt]/) {           # collect comments
+        if ($self->{negativedeltas} &&
+            m/^$self->{comment_char} (.*) is deleted$/) {
+            my $todelete=$1;
+            if ($todelete =~ m/^\[(.*)\]$/) {
+                $self->DeleteSection($1);
+            } else {
+                $self->delval($sect, $todelete);
+            }
+        } else {
+            CORE::push(@cmts, $_);
+        }
+        next;
     }
-    elsif (/^\s*\[\s*(\S|\S.*\S)\s*\]\s*$/) {		# New Section
+    elsif (/^\s*\[\s*(\S|\S.*\S)\s*\]\s*$/) {       # New Section
       $sect = $1;
-      if ($self->{nocase}) {
-        $sect = lc($sect);
-      }
+      $self->_caseify(\$sect);
       $self->AddSection($sect);
       $self->SetSectionComment($sect, @cmts);
       @cmts = ();
     }
-    elsif (($parm, $val) = /^\s*([^=]*?[^=\s])\s*=\s*(.*)$/) {	# new parameter
-		if ((!defined($sect)) and defined($self->{fallback}))
-		{ 
-			$sect = $self->{fallback};
-			$self->{fallback_used}++;
-		}
-		if (!defined $sect) {
-			CORE::push(@Config::IniFiles::errors, sprintf('%d: %s', $lineno,
-				qq#parameter found outside a section#));
-			$self->_rollback($fh);
-			return undef;
-		}
+    elsif (($parm, $val) = /^\s*([^=]*?[^=\s])\s*=\s*(.*)$/) {  # new parameter
+        if ((!defined($sect)) and defined($self->{fallback}))
+        { 
+            $sect = $self->{fallback};
+            $self->{fallback_used}++;
+        }
+        if (!defined $sect) {
+            CORE::push(@Config::IniFiles::errors, sprintf('%d: %s', $lineno,
+                qq#parameter found outside a section#));
+            $self->_rollback($fh);
+            return undef;
+        }
 
       $parm = lc($parm) if $nocase;
       my @val = ( );
       my $eotmark;
-      if ($val =~ /^<<(.*)$/) {			# "here" value
-	   $eotmark  = $1;
-	my $foundeot = 0;
-	my $startline = $lineno;
-	while ( defined($_=$self->_nextline($fh)) ) {
-	  s/(\015\012?|\012|\025|\n)$//;				# remove line ending char(s)
-	  $lineno++;
-	  if ($_ eq $eotmark) {
-	    $foundeot = 1;
-	    last;
-	  } else {
-		# Untaint
-		/(.*)/ms; 
+      if ($val =~ /^<<(.*)$/) {         # "here" value
+       $eotmark  = $1;
+    my $foundeot = 0;
+    my $startline = $lineno;
+    while ( defined($_=$self->_nextline($fh)) ) {
+      s/(\015\012?|\012|\025|\n)$//;                # remove line ending char(s)
+      $lineno++;
+      if ($_ eq $eotmark) {
+        $foundeot = 1;
+        last;
+      } else {
+        # Untaint
+        /(.*)/ms; 
         CORE::push(@val, $1);
-	  }
-	}
-	if (! $foundeot) {
-	  CORE::push(@Config::IniFiles::errors, sprintf('%d: %s', $startline,
-			      qq#no end marker ("$eotmark") found#));
+      }
+    }
+    if (! $foundeot) {
+      CORE::push(@Config::IniFiles::errors, sprintf('%d: %s', $startline,
+                  qq#no end marker ("$eotmark") found#));
       $self->_rollback();
-	  return undef;
+      return undef;
     }
       } else { # no here value
 
         # process continuation lines, if any
         while($self->{allowcontinue} && $val =~ s/\\$//) {
           $_ = $self->_nextline($fh);
-	  s/(\015\012?|\012|\025|\n)$//; # remove line ending char(s)
-	  $lineno++;
+      s/(\015\012?|\012|\025|\n)$//; # remove line ending char(s)
+      $lineno++;
           $val .= $_;
         }
 
         # we should split value and comments if there is any comment
         if ($end_commenthandle &&
-            $val =~ /(.*?)\s*[$allCmt]\s*([^$allCmt\s]*)$/) {
+            $val =~ /(.*?)\s*[$allCmt]\s*([^$allCmt]*)$/) {
             $val = $1;
             $end_comment = $2;
         } else {
             $end_comment = "";
         }
 
-		@val = $val;
+        @val = $val;
       }
-		# Now load value
-		if (exists $self->{v}{$sect}{$parm} && 
-			exists $self->{myparms}{$sect} && 
-			grep( /^\Q$parm\E$/, @{$self->{myparms}{$sect}}) ) {
-			$self->push($sect, $parm, @val);
-		} else {
-	        # Loaded parameters shadow imported ones, instead of appending
-			# to them
-			$self->newval($sect, $parm, @val);
-		}
-		$self->SetParameterComment($sect, $parm, @cmts);
-		@cmts = ( );
-		$self->SetParameterEOT($sect,$parm,$eotmark) if (defined $eotmark);
+        # Now load value
+        if (exists $self->{v}{$sect}{$parm} && 
+            exists $self->{myparms}{$sect} && 
+            grep( /^\Q$parm\E$/, @{$self->{myparms}{$sect}}) ) {
+            $self->push($sect, $parm, @val);
+        } else {
+            # Loaded parameters shadow imported ones, instead of appending
+            # to them
+            $self->newval($sect, $parm, @val);
+        }
+        $self->SetParameterComment($sect, $parm, @cmts);
+        @cmts = ( );
+        $self->SetParameterEOT($sect,$parm,$eotmark) if (defined $eotmark);
         # if handle_trailing_comment is off, this line makes no sense, since all $end_comment=""
         $self->SetParameterTrailingComment($sect, $parm, $end_comment);
 
@@ -967,13 +976,13 @@ sub ReadConfig {
   # Special case: return undef if file is empty. (suppress this line to
   # restore the more intuitive behaviour of accepting empty files)
   if (! keys %{$self->{v}} && ! $self->{allowempty}) {
-	  CORE::push @Config::IniFiles::errors, "Empty file treated as error";
-	  $self->_rollback($fh);
-	  return undef;
+      CORE::push @Config::IniFiles::errors, "Empty file treated as error";
+      $self->_rollback($fh);
+      return undef;
   }
 
   if( defined (my $defaultsect=$self->{startup_settings}->{-default}) ) {
-	  $self->AddSection($defaultsect);
+      $self->AddSection($defaultsect);
   } # end if
 
   $self->_SetEndComments(@cmts);
@@ -1004,18 +1013,16 @@ Returns 1 if the specified section exists in the INI file, 0 otherwise (undefine
 =cut
 
 sub SectionExists {
-	my $self = shift;
-	my $sect = shift;
-	
-	return undef if not defined $sect;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-	}
-	
-	return undef() if not defined $sect;
-	return 1 if (grep {/^\Q$sect\E$/} @{$self->{sects}});
-	return 0;
+    my $self = shift;
+    my $sect = shift;
+    
+    return undef if not defined $sect;
+    
+    $self->_caseify(\$sect);
+
+    return undef() if not defined $sect;
+    return 1 if (grep {/^\Q$sect\E$/} @{$self->{sects}});
+    return 0;
 }
 
 =head2 AddSection ( $sect_name )
@@ -1030,50 +1037,47 @@ the name that you're adding isn't in the list of sections already.
 =cut
 
 sub AddSection {
-	my $self = shift;
-	my $sect = shift;
-	
-	return undef if not defined $sect;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-	}
-	
-	return if $self->SectionExists($sect);
-	CORE::push @{$self->{sects}}, $sect unless
-	  grep /^\Q$sect\E$/, @{$self->{sects}};
-	$self->_touch_section($sect);
+    my ($self, $sect) = @_;
+    
+    return undef if not defined $sect;
 
-	$self->SetGroupMember($sect);
-	
-	# Set up the parameter names and values lists
+    $self->_caseify(\$sect);
+
+    return if $self->SectionExists($sect);
+    CORE::push @{$self->{sects}}, $sect unless
+      grep /^\Q$sect\E$/, @{$self->{sects}};
+    $self->_touch_section($sect);
+
+    $self->SetGroupMember($sect);
+    
+    # Set up the parameter names and values lists
     $self->{parms}{$sect} = [] unless ref $self->{parms}{$sect} eq 'ARRAY';
-	if (!defined($self->{v}{$sect})) {
-		$self->{sCMT}{$sect} = [];
-		$self->{pCMT}{$sect} = {};		# Comments above parameters
-		$self->{parms}{$sect} = [];
-		$self->{v}{$sect} = {};
-	}
+    if (!defined($self->{v}{$sect})) {
+        $self->{sCMT}{$sect} = [];
+        $self->{pCMT}{$sect} = {};      # Comments above parameters
+        $self->{parms}{$sect} = [];
+        $self->{v}{$sect} = {};
+    }
 }
 
 # Marks a section as modified by us (this includes deleted by us).
 sub _touch_section {
-	my ($self, $sect)=@_;
+    my ($self, $sect)=@_;
 
-	$self->{mysects} ||= [];
-	CORE::push @{$self->{mysects}}, $sect unless
-	  grep /^\Q$sect\E$/, @{$self->{mysects}};
+    $self->{mysects} ||= [];
+    CORE::push @{$self->{mysects}}, $sect unless
+      grep /^\Q$sect\E$/, @{$self->{mysects}};
 }
 
 # Marks a parameter as modified by us (this includes deleted by us).
 sub _touch_parameter {
-	my ($self, $sect, $parm)=@_;
+    my ($self, $sect, $parm)=@_;
 
-	$self->_touch_section($sect);
-	return if (!exists $self->{v}{$sect});
-	$self->{myparms}{$sect} ||= [];
-	CORE::push @{$self->{myparms}{$sect}}, $parm unless
-	  grep /^\Q$parm\E$/, @{$self->{myparms}{$sect}};
+    $self->_touch_section($sect);
+    return if (!exists $self->{v}{$sect});
+    $self->{myparms}{$sect} ||= [];
+    CORE::push @{$self->{myparms}{$sect}}, $parm unless
+      grep /^\Q$parm\E$/, @{$self->{myparms}{$sect}};
 }
 
 
@@ -1084,34 +1088,32 @@ Completely removes the entire section from the configuration.
 =cut
 
 sub DeleteSection {
-	my $self = shift;
-	my $sect = shift;
-	
-	return undef if not defined $sect;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-	}
+    my $self = shift;
+    my $sect = shift;
+    
+    return undef if not defined $sect;
+    
+    $self->_caseify(\$sect);
 
-	# This is done the fast way, change if data structure changes!!
-	delete $self->{v}{$sect};
-	delete $self->{sCMT}{$sect};
-	delete $self->{pCMT}{$sect};
-	delete $self->{EOT}{$sect};
-	delete $self->{parms}{$sect};
-	delete $self->{myparms}{$sect};
+    # This is done the fast way, change if data structure changes!!
+    delete $self->{v}{$sect};
+    delete $self->{sCMT}{$sect};
+    delete $self->{pCMT}{$sect};
+    delete $self->{EOT}{$sect};
+    delete $self->{parms}{$sect};
+    delete $self->{myparms}{$sect};
 
-	@{$self->{sects}} = grep !/^\Q$sect\E$/, @{$self->{sects}};
-	$self->_touch_section($sect);
+    @{$self->{sects}} = grep !/^\Q$sect\E$/, @{$self->{sects}};
+    $self->_touch_section($sect);
 
-	if( $sect =~ /^(\S+)\s+\S+/ ) {
-		my $group = $1;
-		if( defined($self->{group}{$group}) ) {
-			@{$self->{group}{$group}} = grep !/^\Q$sect\E$/, @{$self->{group}{$group}};
-		} # end if
-	} # end if
+    if( $sect =~ /^(\S+)\s+\S+/ ) {
+        my $group = $1;
+        if( defined($self->{group}{$group}) ) {
+            @{$self->{group}{$group}} = grep !/^\Q$sect\E$/, @{$self->{group}{$group}};
+        } # end if
+    } # end if
 
-	return 1;
+    return 1;
 } # end DeleteSection
 
 =head2 Parameters ($sect_name)
@@ -1127,10 +1129,8 @@ sub Parameters {
   
   return undef if not defined $sect;
   
-  if ($self->{nocase}) {
-    $sect = lc($sect);
-  }
-  
+  $self->_caseify(\$sect);
+
   return @{$self->{parms}{$sect}} if ref $self->{parms}{$sect} eq 'ARRAY';
   return ();
 }
@@ -1150,7 +1150,7 @@ Groups is to aid people building more complex configuration files.
 
 =cut
 
-sub Groups	{
+sub Groups  {
   my $self = shift;
   return keys %{$self->{group}} if ref $self->{group} eq 'HASH';
   return ();
@@ -1165,20 +1165,20 @@ Only intended for use in newval.
 =cut
 
 sub SetGroupMember {
-	my $self = shift;
-	my $sect = shift;
-	
-	return undef if not defined $sect;
-	
-	return(1) unless $sect =~ /^(\S+)\s+\S+/;
-	
-	my $group = $1;
-	if (not exists($self->{group}{$group})) {
-		$self->{group}{$group} = [];
-	}
-	if (not grep {/^\Q$sect\E$/} @{$self->{group}{$group}}) {
-		CORE::push @{$self->{group}{$group}}, $sect;
-	}
+    my $self = shift;
+    my $sect = shift;
+    
+    return undef if not defined $sect;
+    
+    return(1) unless $sect =~ /^(\S+)\s+\S+/;
+    
+    my $group = $1;
+    if (not exists($self->{group}{$group})) {
+        $self->{group}{$group} = [];
+    }
+    if (not grep {/^\Q$sect\E$/} @{$self->{group}{$group}}) {
+        CORE::push @{$self->{group}{$group}}, $sect;
+    }
 }
 
 =head2 RemoveGroupMember ( $sect )
@@ -1189,16 +1189,16 @@ appropriate group. Only intended for use in DeleteSection.
 =cut
 
 sub RemoveGroupMember {
-	my $self = shift;
-	my $sect = shift;
-	
-	return undef if not defined $sect;
-	
-	return(1) unless $sect =~ /^(\S+)\s+\S+/;
-	
-	my $group = $1;
-	return unless exists $self->{group}{$group};
-	@{$self->{group}{$group}} = grep {!/^\Q$sect\E$/} @{$self->{group}{$group}};
+    my $self = shift;
+    my $sect = shift;
+    
+    return undef if not defined $sect;
+    
+    return(1) unless $sect =~ /^(\S+)\s+\S+/;
+    
+    my $group = $1;
+    return unless exists $self->{group}{$group};
+    @{$self->{group}{$group}} = grep {!/^\Q$sect\E$/} @{$self->{group}{$group}};
 }
 
 =head2 GroupMembers ($group)
@@ -1222,10 +1222,8 @@ sub GroupMembers {
   
   return undef if not defined $group;
   
-  if ($self->{nocase}) {
-  	$group = lc($group);
-  }
-  
+  $self->_caseify(\$group);
+
   return @{$self->{group}{$group}} if ref $self->{group}{$group} eq 'ARRAY';
   return ();
 }
@@ -1240,12 +1238,12 @@ $mode must be a string representation of the octal mode.
 
 sub SetWriteMode
 {
-	my $self = shift;
-	my $mode = shift;
-	return undef if not defined ($mode);
-	return undef if not ($mode =~ m/[0-7]{3,3}/);
-	$self->{file_mode} = $mode;
-	return $mode;
+    my $self = shift;
+    my $mode = shift;
+    return undef if not defined ($mode);
+    return undef if not ($mode =~ m/[0-7]{3,3}/);
+    $self->{file_mode} = $mode;
+    return $mode;
 }
 
 =head2 GetWriteMode ($mode)
@@ -1258,9 +1256,9 @@ $mode is a string representation of the octal mode.
 
 sub GetWriteMode
 {
-	my $self = shift;
-	return undef if not exists $self->{file_mode};
-	return $self->{file_mode};
+    my $self = shift;
+    return undef if not exists $self->{file_mode};
+    return $self->{file_mode};
 }
 
 =head2 WriteConfig ($filename [, %options])
@@ -1283,8 +1281,7 @@ Returns true on success, C<undef> on failure.
 =cut
 
 sub WriteConfig {
-  my ($self, $file, %parms)=@_;
-  %parms = () unless %parms;
+  my ($self, $file, %parms) = @_;
   
   return undef unless defined $file;
   
@@ -1306,19 +1303,16 @@ sub WriteConfig {
     }
   
     my $new_file = $file . "-new";
-    local(*F);
-    open(F, "> $new_file") || do {
+    open(my $fh, '>', $new_file) || do {
       carp "Unable to write temp config file $new_file: $!";
       return undef;
     };
-    my $oldfh = select(F);
-    $self->OutputConfig($parms{-delta});
-    close(F);
-    select($oldfh);
-    rename( $new_file, $file ) || do {
+    $self->OutputConfigToFileHandle($fh, $parms{-delta});
+    close($fh);
+    if (!rename( $new_file, $file )) {
       carp "Unable to rename temp config file ($new_file) to $file: $!";
       return undef;
-    };
+    }
     if (exists $self->{file_mode}) {
       chmod oct($self->{file_mode}), $file;
     }
@@ -1341,10 +1335,8 @@ sub WriteConfig {
       carp "Cannot write configuration file to STDIN.";
     } else {
       seek( $fh, 0, 0 );
-      my $oldfh = select($fh);
-      $self->OutputConfig($parms{-delta});
+      $self->OutputConfigToFileHandle($fh, $parms{-delta});
       seek( $fh, 0, 0 );
-      select($oldfh);
     } # end if
 
   } # end if (filehandle/name)
@@ -1383,14 +1375,14 @@ If no filename has been specified, returns undef.
 
 sub GetFileName
 {
-	my $self = shift;
-	my $filename;
-	if (exists $self->{cf}) {
-		$filename = $self->{cf};
-	} else {
-		undef $filename;
-	}
-	return $filename;
+    my $self = shift;
+    my $filename;
+    if (exists $self->{cf}) {
+        $filename = $self->{cf};
+    } else {
+        undef $filename;
+    }
+    return $filename;
 }
 
 =head2 SetFileName ($filename)
@@ -1416,11 +1408,17 @@ sub SetFileName {
   return undef;
 }
 
+=head2 $ini->OutputConfigToFileHandle($fh, $delta)
+
+Writes OutputConfig to the $fh filehandle. $delta should be set to 1
+1 if writing only delta. This is a newer and safer version of 
+C<OutputConfig()> and one is encouraged to use it instead.
+
 =head2 $ini->OutputConfig($delta)
 
 Writes OutputConfig to STDOUT. Use select() to redirect STDOUT to
 the output target before calling this function. Optional argument
-should be set to 1 if writing only delta.
+should be set to 1 if writing only delta. Also see OutputConfigToFileHandle
 
 =cut
 
@@ -1477,6 +1475,15 @@ sub _OutputParam {
 sub OutputConfig {
     my ($self, $delta) = @_;
 
+    return $self->OutputConfigToFileHandle(select(), $delta);
+}
+
+sub OutputConfigToFileHandle {
+    # We need no strict 'refs' to be able to print to $fh if it points
+    # to a glob filehandle.
+    no strict 'refs';
+    my ($self, $fh, $delta) = @_;
+
     my($sect, $parm, @cmts);
     my $ors = $self->{line_ends} || $\ || "\n"; # $\ is normally unset, but use input by default
     my $notfirst = 0;
@@ -1485,19 +1492,19 @@ sub OutputConfig {
     foreach $sect (@{$self->{$delta ? "mysects" : "sects"}}) {
         if (!defined $self->{v}{$sect}) {
             if ($delta) {
-                print "$self->{comment_char} [$sect] is deleted$ors";
+                print {$fh} "$self->{comment_char} [$sect] is deleted$ors";
             } else {
                 warn "Weird unknown section $sect" if $^W;
             }
             next SECT;
         }
         next unless defined $self->{v}{$sect};
-        print $ors if $notfirst;
+        print {$fh} $ors if $notfirst;
         $notfirst = 1;
         if ((ref($self->{sCMT}{$sect}) eq 'ARRAY') &&
             (@cmts = @{$self->{sCMT}{$sect}})) {
             foreach (@cmts) {
-                print "$_$ors";
+                print {$fh} "$_$ors";
             }
         }
 
@@ -1505,7 +1512,7 @@ sub OutputConfig {
             ($self->{fallback_used} and $sect eq $self->{fallback})
         )
         {
-            print "[$sect]$ors";
+            print {$fh} "[$sect]$ors";
         }
         next unless ref $self->{v}{$sect} eq 'HASH';
 
@@ -1513,7 +1520,7 @@ sub OutputConfig {
         foreach $parm (@{$self->{$delta ? "myparms" : "parms"}{$sect}}) {
             if (!defined $self->{v}{$sect}{$parm}) {
                 if ($delta) {
-                    print "$self->{comment_char} $parm is deleted$ors";
+                    print {$fh} "$self->{comment_char} $parm is deleted$ors";
                 } else {
                     warn "Weird unknown parameter $parm" if $^W;
                 }
@@ -1522,7 +1529,7 @@ sub OutputConfig {
             if ((ref($self->{pCMT}{$sect}{$parm}) eq 'ARRAY') &&
                 (@cmts = @{$self->{pCMT}{$sect}{$parm}})) {
                 foreach (@cmts) {
-                    print "$_$ors";
+                    print {$fh} "$_$ors";
                 }
             }
 
@@ -1540,15 +1547,15 @@ sub OutputConfig {
                 ),
                 $ors,
                 defined $end_comment ? $end_comment : "",
-                sub { print @_; },
+                sub { print {$fh} @_; },
             );
         }
     }
     foreach my $comment ($self->_GetEndComments()) {
-        print "$comment$ors";
+        print {$fh} "$comment$ors";
     }
     return 1;
-    }
+}
 
 =head2 SetSectionComment($section, @comment)
 
@@ -1565,24 +1572,22 @@ To clear a section comment, use DeleteSectionComment ($section)
 
 sub SetSectionComment
 {
-	my $self = shift;
-	my $sect = shift;
-	my @comment = @_;
+    my $self = shift;
+    my $sect = shift;
+    my @comment = @_;
 
-	return undef if not defined $sect;
-	return undef unless @comment;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-	}
-	
-	$self->_touch_section($sect);
-	$self->{sCMT}{$sect} = [];
-	# At this point it's possible to have a comment for a section that
-	# doesn't exist. This comment will not get written to the INI file.
-	
-	CORE::push @{$self->{sCMT}{$sect}}, $self->_markup_comments(@comment);
-	return scalar @comment;
+    return undef if not defined $sect;
+    return undef unless @comment;
+    
+    $self->_caseify(\$sect);
+
+    $self->_touch_section($sect);
+    $self->{sCMT}{$sect} = [];
+    # At this point it's possible to have a comment for a section that
+    # doesn't exist. This comment will not get written to the INI file.
+    
+    CORE::push @{$self->{sCMT}{$sect}}, $self->_markup_comments(@comment);
+    return scalar @comment;
 }
 
 
@@ -1617,17 +1622,15 @@ used on that line.
 
 sub GetSectionComment
 {
-	my $self = shift;
-	my $sect = shift;
+    my $self = shift;
+    my $sect = shift;
 
-	return undef if not defined $sect;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-	}
-	
-	if (exists $self->{sCMT}{$sect}) {
-		my @ret = @{$self->{sCMT}{$sect}};
+    return undef if not defined $sect;
+    
+    $self->_caseify(\$sect);
+
+    if (exists $self->{sCMT}{$sect}) {
+        my @ret = @{$self->{sCMT}{$sect}};
         if (wantarray()) {
             return @ret;
         }
@@ -1638,9 +1641,9 @@ sub GetSectionComment
                 return join "\n", @ret;
             }
         }
-	} else {
-		return undef;
-	}
+    } else {
+        return undef;
+    }
 }
 
 =head2 DeleteSectionComment ($section)
@@ -1651,17 +1654,15 @@ Removes the comment for the specified section.
 
 sub DeleteSectionComment
 {
-	my $self = shift;
-	my $sect = shift;
-	
-	return undef if not defined $sect;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-	}
-	$self->_touch_section($sect);
+    my $self = shift;
+    my $sect = shift;
+    
+    return undef if not defined $sect;
+    
+    $self->_caseify(\$sect);
+    $self->_touch_section($sect);
 
-	delete $self->{sCMT}{$sect};
+    delete $self->{sCMT}{$sect};
 }
 
 =head2 SetParameterComment ($section, $parameter, @comment)
@@ -1675,30 +1676,27 @@ prepended with one. See L</SetSectionComment($section, @comment)> above
 
 sub SetParameterComment
 {
-	my $self = shift;
-	my $sect = shift;
-	my $parm = shift;
-	my @comment = @_;
+    my $self = shift;
+    my $sect = shift;
+    my $parm = shift;
+    my @comment = @_;
 
-	defined($sect) || return undef;
-	defined($parm) || return undef;
-	@comment || return undef;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-		$parm = lc($parm);
-	}
-	
-	$self->_touch_parameter($sect, $parm);
-	if (not exists $self->{pCMT}{$sect}) {
-		$self->{pCMT}{$sect} = {};
-	}
-	
-	$self->{pCMT}{$sect}{$parm} = [];
-	# Note that at this point, it's possible to have a comment for a parameter,
-	# without that parameter actually existing in the INI file.
-	CORE::push @{$self->{pCMT}{$sect}{$parm}}, $self->_markup_comments(@comment);
-	return scalar @comment;
+    defined($sect) || return undef;
+    defined($parm) || return undef;
+    @comment || return undef;
+    
+    $self->_caseify(\$sect, \$parm);
+
+    $self->_touch_parameter($sect, $parm);
+    if (not exists $self->{pCMT}{$sect}) {
+        $self->{pCMT}{$sect} = {};
+    }
+    
+    $self->{pCMT}{$sect}{$parm} = [];
+    # Note that at this point, it's possible to have a comment for a parameter,
+    # without that parameter actually existing in the INI file.
+    CORE::push @{$self->{pCMT}{$sect}{$parm}}, $self->_markup_comments(@comment);
+    return scalar @comment;
 }
 
 sub _SetEndComments
@@ -1726,23 +1724,20 @@ comments - in scalar context returns them joined by newlines.
 
 sub GetParameterComment
 {
-	my $self = shift;
-	my $sect = shift;
-	my $parm = shift;
-	
-	defined($sect) || return undef;
-	defined($parm) || return undef;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-		$parm = lc($parm);
-	};
-	
-	exists($self->{pCMT}{$sect}) || return undef;
-	exists($self->{pCMT}{$sect}{$parm}) || return undef;
-	
-	my @comment = @{$self->{pCMT}{$sect}{$parm}};
-	return wantarray() ? @comment : join((defined $/ ? $/ : "\n"), @comment);
+    my $self = shift;
+    my $sect = shift;
+    my $parm = shift;
+    
+    defined($sect) || return undef;
+    defined($parm) || return undef;
+    
+    $self->_caseify(\$sect, \$parm);
+
+    exists($self->{pCMT}{$sect}) || return undef;
+    exists($self->{pCMT}{$sect}{$parm}) || return undef;
+    
+    my @comment = @{$self->{pCMT}{$sect}{$parm}};
+    return wantarray() ? @comment : join((defined $/ ? $/ : "\n"), @comment);
 }
 
 =head2 DeleteParameterComment ($section, $parmeter)
@@ -1753,25 +1748,22 @@ Deletes the comment attached to a parameter.
 
 sub DeleteParameterComment
 {
-	my $self = shift;
-	my $sect = shift;
-	my $parm = shift;
-	
-	defined($sect) || return undef;
-	defined($parm) || return undef;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-		$parm = lc($parm);
-	};
-	
-	# If the parameter doesn't exist, our goal has already been achieved
-	exists($self->{pCMT}{$sect}) || return 1;
-	exists($self->{pCMT}{$sect}{$parm}) || return 1;
+    my $self = shift;
+    my $sect = shift;
+    my $parm = shift;
+    
+    defined($sect) || return undef;
+    defined($parm) || return undef;
+    
+    $self->_caseify(\$sect, \$parm);
 
-	$self->_touch_parameter($sect, $parm);
-	delete $self->{pCMT}{$sect}{$parm};
-	return 1;
+    # If the parameter doesn't exist, our goal has already been achieved
+    exists($self->{pCMT}{$sect}) || return 1;
+    exists($self->{pCMT}{$sect}{$parm}) || return 1;
+
+    $self->_touch_parameter($sect, $parm);
+    delete $self->{pCMT}{$sect}{$parm};
+    return 1;
 }
 
 =head2 GetParameterEOT ($section, $parameter)
@@ -1782,26 +1774,23 @@ Accessor method for the EOT text (in fact, style) of the specified parameter. If
 
 sub GetParameterEOT
 {
-	my $self = shift;
-	my $sect = shift;
-	my $parm = shift;
+    my $self = shift;
+    my $sect = shift;
+    my $parm = shift;
 
-	defined($sect) || return undef;
-	defined($parm) || return undef;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-		$parm = lc($parm);
-	};
+    defined($sect) || return undef;
+    defined($parm) || return undef;
+    
+    $self->_caseify(\$sect, \$parm);
 
-	if (not exists $self->{EOT}{$sect}) {
-		$self->{EOT}{$sect} = {};
-	}
+    if (not exists $self->{EOT}{$sect}) {
+        $self->{EOT}{$sect} = {};
+    }
 
-	if (not exists $self->{EOT}{$sect}{$parm}) {
-		return undef;
-	}
-	return $self->{EOT}{$sect}{$parm};
+    if (not exists $self->{EOT}{$sect}{$parm}) {
+        return undef;
+    }
+    return $self->{EOT}{$sect}{$parm};
 }
 
 =head2 $cfg->SetParameterEOT ($section, $parameter, $EOT)
@@ -1814,21 +1803,18 @@ To un-set the EOT text, use DeleteParameterEOT ($section, $parameter).
 
 sub SetParameterEOT
 {
-	my $self = shift;
-	my $sect = shift;
-	my $parm = shift;
-	my $EOT = shift;
+    my $self = shift;
+    my $sect = shift;
+    my $parm = shift;
+    my $EOT = shift;
 
-	defined($sect) || return undef;
-	defined($parm) || return undef;
-	defined($EOT) || return undef;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-		$parm = lc($parm);
-	};
+    defined($sect) || return undef;
+    defined($parm) || return undef;
+    defined($EOT) || return undef;
+    
+    $self->_caseify(\$sect, \$parm);
 
-	$self->_touch_parameter($sect, $parm);
+    $self->_touch_parameter($sect, $parm);
     if (not exists $self->{EOT}{$sect}) {
         $self->{EOT}{$sect} = {};
     }
@@ -1846,20 +1832,17 @@ then "EOT" is used.
 
 sub DeleteParameterEOT
 {
-	my $self = shift;
-	my $sect = shift;
-	my $parm = shift;
-	
-	defined($sect) || return undef;
-	defined($parm) || return undef;
-	
-	if ($self->{nocase}) {
-		$sect = lc($sect);
-		$parm = lc($parm);
-	}
+    my $self = shift;
+    my $sect = shift;
+    my $parm = shift;
+    
+    defined($sect) || return undef;
+    defined($parm) || return undef;
+    
+    $self->_caseify(\$sect, \$parm);
 
-	$self->_touch_parameter($sect, $parm);
-	delete $self->{EOT}{$sect}{$parm};
+    $self->_touch_parameter($sect, $parm);
+    delete $self->{EOT}{$sect}{$parm};
 }
 
 =head2 SetParameterTrailingComment ($section, $parameter, $cmt)
@@ -1884,10 +1867,7 @@ sub SetParameterTrailingComment
     return undef if not defined $parm;
     return undef if not defined $cmt;
 
-    if ($self->{nocase}) {
-        $sect = lc($sect);
-        $parm = lc($parm);
-    }
+    $self->_caseify(\$sect, \$parm);
 
     # confirm the parameter exist
     return undef if not exists $self->{v}{$sect}{$parm};
@@ -1915,10 +1895,7 @@ sub GetParameterTrailingComment
     return undef if not defined $sect;
     return undef if not defined $parm;
 
-    if ($self->{nocase}) {
-        $sect = lc($sect);
-        $parm = lc($parm);
-    }
+    $self->_caseify(\$sect, \$parm);
 
     # confirm the parameter exist
     return undef if not exists $self->{v}{$sect}{$parm};
@@ -1932,13 +1909,13 @@ Deletes the entire configuration file in memory.
 =cut
 
 sub Delete {
-	my $self = shift;
+    my $self = shift;
 
-	foreach my $section ($self->Sections()) {
-		$self->DeleteSection($section);
-	}
+    foreach my $section ($self->Sections()) {
+        $self->DeleteSection($section);
+    }
 
-	return 1;
+    return 1;
 } # end Delete
 
 
@@ -2122,7 +2099,7 @@ sub FETCH {
   my $self = shift;
   my( $key ) = @_;
 
-  $key = lc($key) if( $self->{nocase} );
+  $self->_caseify(\$key);
   return if (! $self->{v}{$key});
 
   my %retval;
@@ -2144,7 +2121,7 @@ sub STORE {
 
   return undef unless ref($ref) eq 'HASH';
 
-  $key = lc($key) if( $self->{nocase} );
+  $self->_caseify(\$key);
 
   $self->AddSection($key);
   $self->{v}{$key} = {%$ref};
@@ -2240,7 +2217,7 @@ sub DESTROY {
 # Sub: _make_filehandle
 #
 # Args: $thing
-#	$thing	An input source
+#   $thing  An input source
 #
 # Description: Takes an input source of a filehandle, 
 # filehandle glob, reference to a filehandle glob, IO::File
@@ -2263,13 +2240,13 @@ sub _make_filehandle {
   my $thing = shift;
 
   if (ref($thing) eq "SCALAR") {
-	  if (eval { require IO::Scalar; $IO::Scalar::VERSION >= 2.109; }) {
-		  return IO::Scalar->new($thing);
-	  } else {
-		  warn "SCALAR reference as file descriptor requires IO::stringy ".
-			"v2.109 or later" if ($^W);
-		  return;
-	  }
+      if (eval { require IO::Scalar; $IO::Scalar::VERSION >= 2.109; }) {
+          return IO::Scalar->new($thing);
+      } else {
+          warn "SCALAR reference as file descriptor requires IO::stringy ".
+            "v2.109 or later" if ($^W);
+          return;
+      }
   }
 
   return $thing if defined(fileno $thing);
@@ -2321,7 +2298,7 @@ $Config::IniFiles::_section::VERSION = 2.16;
 # Sub: Config::IniFiles::_section::TIEHASH
 #
 # Args: $class, $config, $section
-#	$class	  The class that this is being tied to.
+#   $class    The class that this is being tied to.
 #   $config   The parent Config::IniFiles object
 #   $section  The section this tied object refers to
 #
@@ -2345,7 +2322,7 @@ sub TIEHASH {
 # Sub: Config::IniFiles::_section::FETCH
 #
 # Args: $key
-#	$key	The name of the key whose value to get
+#   $key    The name of the key whose value to get
 #
 # Description: Returns the value associated with $key. If
 # the value is a list, returns a list reference.
@@ -2357,9 +2334,9 @@ sub TIEHASH {
 # 2002Jul04 Returning scalar values (Bug:447532)          AS
 # ----------------------------------------------------------
 sub FETCH {
-	my ($self, $key)=@_;
-	my @retval=$self->{config}->val($self->{section}, $key);
-	return (@retval <= 1) ? $retval[0] : \@retval;
+    my ($self, $key)=@_;
+    my @retval=$self->{config}->val($self->{section}, $key);
+    return (@retval <= 1) ? $retval[0] : \@retval;
 } # end FETCH
 
 
@@ -2367,8 +2344,8 @@ sub FETCH {
 # Sub: Config::IniFiles::_section::STORE
 #
 # Args: $key, @val
-#	$key	The key under which to store the value
-#	@val	The value to store, either an array or a scalar
+#   $key    The key under which to store the value
+#   @val    The value to store, either an array or a scalar
 #
 # Description: Sets the value for the specified $key
 # ----------------------------------------------------------
@@ -2377,8 +2354,8 @@ sub FETCH {
 # 2001Apr04 Fixed -nocase bug                             JW
 # ----------------------------------------------------------
 sub STORE {
-	my ($self, $key, @val)=@_;
-	return $self->{config}->newval($self->{section}, $key, @val);
+    my ($self, $key, @val)=@_;
+    return $self->{config}->newval($self->{section}, $key, @val);
 } # end STORE
 
 
@@ -2386,7 +2363,7 @@ sub STORE {
 # Sub: Config::IniFiles::_section::DELETE
 #
 # Args: $key
-#	$key	The key to remove from the hash
+#   $key    The key to remove from the hash
 #
 # Description: Removes the specified key from the hash and
 # returns its former value.
@@ -2396,10 +2373,10 @@ sub STORE {
 # 2001Apr04 Fixed -nocase bug                              JW
 # ----------------------------------------------------------
 sub DELETE {
-	my ($self, $key)=@_;
-	my $retval=$self->{config}->val($self->{section}, $key);
-	$self->{config}->delval($self->{section}, $key);
-	return $retval;
+    my ($self, $key)=@_;
+    my $retval=$self->{config}->val($self->{section}, $key);
+    $self->{config}->delval($self->{section}, $key);
+    return $retval;
 } # end DELETE
 
 # ----------------------------------------------------------
@@ -2421,7 +2398,7 @@ sub CLEAR    {
 # Sub: Config::IniFiles::_section::EXISTS
 #
 # Args: $key
-#	$key	The key to look for
+#   $key    The key to look for
 #
 # Description: Returns whether the key exists
 # ----------------------------------------------------------
@@ -2455,7 +2432,7 @@ sub FIRSTKEY {
 # Sub: Config::IniFiles::_section::NEXTKEY
 #
 # Args: $last
-#	$last	The last key accessed by the interator
+#   $last   The last key accessed by the interator
 #
 # Description: Returns the next key in line
 # ----------------------------------------------------------
@@ -2503,7 +2480,7 @@ C<$master> and C<overlay> were created like this:
 
    my $master  = Config::IniFiles->new(-file => "master.ini");
    my $overlay = Config::IniFiles->new(-file => "overlay.ini",
-			-import => $master);
+            -import => $master);
 
 If the contents of C<master.ini> and C<overlay.ini> are respectively
 
@@ -2662,11 +2639,11 @@ Geez, that's a lot of people. And apologies to the folks who were missed.
 
 If you want someone to bug about this, that would be:
 
-	Jeremy Wadsack <dgsupport at wadsack-allen dot com>
+    Jeremy Wadsack <dgsupport at wadsack-allen dot com>
 
 If you want more information, or want to participate, go to:
 
-	http://sourceforge.net/projects/config-inifiles/
+    http://sourceforge.net/projects/config-inifiles/
 
 Please send bug reports to config-inifiles-bugs@lists.sourceforge.net
 
