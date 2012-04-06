@@ -32,7 +32,7 @@ name: Config-IniFiles
 provides:
   Config::IniFiles:
     file: lib/Config/IniFiles.pm
-    version: 2.69
+    version: 2.70
 requires:
   Carp: 0
   Symbol: 0
@@ -42,4 +42,4 @@ resources:
   homepage: https://sourceforge.net/projects/config-inifiles/
   license: http://dev.perl.org/licenses/
   repository: http://config-inifiles.svn.sourceforge.net/svnroot/config-inifiles/
-version: 2.69
+version: 2.70
