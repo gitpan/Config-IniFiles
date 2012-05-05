@@ -1,7 +1,7 @@
 {
    "abstract" : "A module for reading .ini-style configuration files.",
    "author" : [
-      "Shlomi Fish <shlomif@iglu.org.il>"
+      "Shlomi Fish <shlomif@cpan.org>"
    ],
    "dynamic_config" : 1,
    "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.120630",
@@ -44,6 +44,7 @@
       "runtime" : {
          "requires" : {
             "Carp" : "0",
+            "Fcntl" : "0",
             "File::Basename" : "0",
             "File::Temp" : "0",
             "List::MoreUtils" : "0",
@@ -56,7 +57,7 @@
    "provides" : {
       "Config::IniFiles" : {
          "file" : "lib/Config/IniFiles.pm",
-         "version" : "2.71"
+         "version" : "2.72"
       }
    },
    "release_status" : "stable",
@@ -66,8 +67,8 @@
          "http://dev.perl.org/licenses/"
       ],
       "repository" : {
-         "url" : "http://config-inifiles.svn.sourceforge.net/svnroot/config-inifiles/"
+         "url" : "https://bitbucket.org/shlomif/perl-config-inifiles"
       }
    },
-   "version" : "2.71"
+   "version" : "2.72"
 }

@@ -10,7 +10,7 @@ use Test::Run::Builder;
 my $builder = Test::Run::Builder->new(
     'module_name' => "Config::IniFiles",
     'license' => "perl",
-    dist_author => 'Shlomi Fish <shlomif@iglu.org.il>',
+    dist_author => 'Shlomi Fish <shlomif@cpan.org>',
     'configure_requires' =>
     {
         'Module::Build' => '0.36',
@@ -31,6 +31,7 @@ my $builder = Test::Run::Builder->new(
         'Carp' => 0,
         'Symbol' => 0,
         'warnings' => 0,
+        'Fcntl' => 0,
         'File::Basename' => 0,
         'File::Temp' => 0,
         'List::MoreUtils' => 0,
@@ -40,7 +41,7 @@ my $builder = Test::Run::Builder->new(
     {
         resources =>
         {
-            repository => "http://config-inifiles.svn.sourceforge.net/svnroot/config-inifiles/",
+            repository => "https://bitbucket.org/shlomif/perl-config-inifiles",
             homepage => "https://sourceforge.net/projects/config-inifiles/",
         },
         keywords =>

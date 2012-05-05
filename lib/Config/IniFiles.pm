@@ -2,13 +2,14 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = '2.71';
+$VERSION = '2.72';
 
 require 5.004;
 use strict;
 use warnings;
 use Carp;
 use Symbol 'gensym','qualify_to_ref';   # For the 'any data type' hack
+use Fcntl qw( SEEK_SET SEEK_CUR );
 
 use List::MoreUtils qw(any none);
 
@@ -33,7 +34,7 @@ Config::IniFiles - A module for reading .ini-style configuration files.
 =head1 DESCRIPTION
 
 Config::IniFiles provides a way to have readable configuration files outside
-your Perl script. Configurations can be imported (inherited, stacked,...), 
+your Perl script. Configurations can be imported (inherited, stacked,...),
 sections can be grouped, and settings can be accessed from a tied hash.
 
 =head1 FILE FORMAT
@@ -50,23 +51,23 @@ their values.
   Setting=Something else
   Parameter=Different scope than the one in the first section
 
-The first non-blank character of the line indicating a section must 
-be a left bracket and the last non-blank character of a line indicating 
-a section must be a right bracket. The characters making up the section 
+The first non-blank character of the line indicating a section must
+be a left bracket and the last non-blank character of a line indicating
+a section must be a right bracket. The characters making up the section
 name can be any symbols at all. However section names must be unique.
 
 Parameters are specified in each section as Name=Value.  Any spaces
 around the equals sign will be ignored, and the value extends to the
-end of the line (including any whitespace at the end of the line. 
-Parameter names are localized to the namespace of the section, but must 
+end of the line (including any whitespace at the end of the line.
+Parameter names are localized to the namespace of the section, but must
 be unique within a section.
 
 Both the hash mark (#) and the semicolon (;) are comment characters.
-by default (this can be changed by configuration). Lines that begin with 
-either of these characters will be ignored. Any amount of whitespace may 
+by default (this can be changed by configuration). Lines that begin with
+either of these characters will be ignored. Any amount of whitespace may
 precede the comment character.
 
-Multi-line or multi-valued parameters may also be defined ala UNIX 
+Multi-line or multi-valued parameters may also be defined ala UNIX
 "here document" syntax:
 
   Parameter=<<EOT
@@ -78,7 +79,7 @@ You may use any string you want in place of "EOT". Note that whatever
 follows the "<<" and what appears at the end of the text MUST match
 exactly, including any trailing whitespace.
 
-Alternately, as a configuration option (default is off), continuation 
+Alternately, as a configuration option (default is off), continuation
 lines can be allowed:
 
   [Section]
@@ -111,7 +112,7 @@ specify an array as the receiver:
 =head2 new ( [-option=>value ...] )
 
 Returns a new configuration object (or "undef" if the configuration
-file has an error, in which case check the global C<@Config::IniFiles::errors> 
+file has an error, in which case check the global C<@Config::IniFiles::errors>
 array for reasons why). One Config::IniFiles object is required per configuration
 file. The following named parameters are available:
 
@@ -120,7 +121,7 @@ file. The following named parameters are available:
 
 =item I<-file>  filename
 
-Specifies a file to load the parameters from. This 'file' may actually be 
+Specifies a file to load the parameters from. This 'file' may actually be
 any of the following things:
 
   1) the pathname of a file
@@ -158,23 +159,23 @@ any of the following things:
     Parameter=A value
     Setting=Another value
     EOT
-    
+
     $cfg = Config::IniFiles->new( -file => \$ini_file_contents );
 
 
-If this option is not specified, (i.e. you are creating a config file from scratch) 
+If this option is not specified, (i.e. you are creating a config file from scratch)
 you must specify a target file using L<SetFileName> in order to save the parameters.
 
 
 =item I<-default> section
 
-Specifies a section to be used for default values. For example, in the 
-following configuration file, if you look up the "permissions" parameter 
+Specifies a section to be used for default values. For example, in the
+following configuration file, if you look up the "permissions" parameter
 in the "joe" section, there is none.
 
    [all]
    permissions=Nothing
-        
+
    [jane]
    name=Jane
    permissions=Open files
@@ -185,8 +186,8 @@ in the "joe" section, there is none.
 If you create your Config::IniFiles object with a default section of "all" like this:
 
    $cfg = Config::IniFiles->new( -file => "file.ini", -default => "all" );
-   
-Then requsting a value for a "permissions" in the [joe] section will 
+
+Then requsting a value for a "permissions" in the [joe] section will
 check for a value from [all] before returning undef.
 
    $permissions = $cfg->val( "joe", "permissions");   // returns "Nothing"
@@ -226,15 +227,15 @@ turning off case sensitivity.
 
 =item I<-import> object
 
-This allows you to import or inherit existing setting from another 
-Config::IniFiles object. When importing settings from another object, 
-sections with the same name will be merged and parameters that are 
-defined in both the imported object and the I<-file> will take the 
-value of given in the I<-file>. 
+This allows you to import or inherit existing setting from another
+Config::IniFiles object. When importing settings from another object,
+sections with the same name will be merged and parameters that are
+defined in both the imported object and the I<-file> will take the
+value of given in the I<-file>.
 
-If a I<-default> section is also given on this call, and it does not 
-coincide with the default of the imported object, the new default 
-section will be used instead. If no I<-default> section is given, 
+If a I<-default> section is also given on this call, and it does not
+coincide with the default of the imported object, the new default
+section will be used instead. If no I<-default> section is given,
 then the default of the imported object will be used.
 
 
@@ -252,8 +253,8 @@ syntax.
 
 =item I<-allowempty> 0|1
 
-If set to 1, then empty files are allowed at L</ReadConfig|ReadConfig()> 
-time. If set to 0 (the default), an empty configuration file is considered 
+If set to 1, then empty files are allowed at L</ReadConfig|ReadConfig()>
+time. If set to 0 (the default), an empty configuration file is considered
 an error.
 
 
@@ -282,7 +283,7 @@ details.
 =item I<-commentchar> 'char'
 
 The default comment character is C<#>. You may change this by specifying
-this option to another character. This can be any character except 
+this option to another character. This can be any character except
 alphanumeric characters, square brackets or the "equal" sign.
 
 
@@ -292,10 +293,10 @@ Allowed default comment characters are C<#> and C<;>. By specifying this
 option you may change the range of characters that are used to denote a
 comment line to include any set of characters
 
-Note: that the character specified by B<-commentchar> (see above) is 
-I<always> part of the allowed comment characters. 
+Note: that the character specified by B<-commentchar> (see above) is
+I<always> part of the allowed comment characters.
 
-Note 2: The given string is evaluated as a regular expression character 
+Note 2: The given string is evaluated as a regular expression character
 class, so '\' must be escaped if you wish to use it.
 
 
@@ -309,7 +310,7 @@ form:
 
 Default behavior is to not warn (i.e. -reloadwarn => 0).
 
-This is generally only useful when using Config::IniFiles in a server 
+This is generally only useful when using Config::IniFiles in a server
 or daemon application. The application is still responsible for determining
 when the object is to be reloaded.
 
@@ -340,10 +341,10 @@ For example, if we have a parameter line like this:
  param1=value1;comment1
 
 by default, handle_trailing_comment will be set to B<0>, and we will get
-I<value1;comment1> as the value of I<param1>. If we have 
--handle_trailing_comment set to B<1>, then we will get I<value1> 
-as the value for I<param1>, and I<comment1> as the trailing comment of 
-I<param1>. 
+I<value1;comment1> as the value of I<param1>. If we have
+-handle_trailing_comment set to B<1>, then we will get I<value1>
+as the value for I<param1>, and I<comment1> as the trailing comment of
+I<param1>.
 
 Set and get methods for trailing comments are provided as
 L</SetParameterTrailingComment> and L</GetParameterTrailingComment>.
@@ -398,8 +399,8 @@ sub new {
   } # end if
   delete $parms{-import};
 
-  # Copy the original parameters so we 
-  # can use them when we build new sections 
+  # Copy the original parameters so we
+  # can use them when we build new sections
   %{$self->{startup_settings}} = %parms;
 
   # Parse options
@@ -407,7 +408,7 @@ sub new {
   local $_;
   $self->_nocase(0);
 
-  # Handle known parameters first in this order, 
+  # Handle known parameters first in this order,
   # because each() could return parameters in any order
   if (defined ($v = delete $parms{'-file'})) {
     # Should we be pedantic and check that the file exists?
@@ -416,7 +417,7 @@ sub new {
   }
   if (defined ($v = delete $parms{'-nocase'})) {
     $self->_nocase($v);
-  }  
+  }
   if (defined ($v = delete $parms{'-default'})) {
     $self->{default} = $self->_nocase ? lc($v) : $v;
   }
@@ -447,7 +448,7 @@ sub new {
       # must not be square bracket, equal sign or alphanumeric
       carp "Illegal comment character.";
       $errs++;
-    } 
+    }
     else {
       $self->{comment_char} = $v;
     }
@@ -481,7 +482,7 @@ sub new {
   }
 
   return undef if $errs;
-  
+
   if ($self->ReadConfig) {
     return $self;
   } else {
@@ -492,8 +493,8 @@ sub new {
 
 =head2 val ($section, $parameter [, $default] )
 
-Returns the value of the specified parameter (C<$parameter>) in section 
-C<$section>, returns undef (or C<$default> if specified) if no section or 
+Returns the value of the specified parameter (C<$parameter>) in section
+C<$section>, returns undef (or C<$default> if specified) if no section or
 no parameter for the given section exists.
 
 
@@ -523,47 +524,61 @@ sub _caseify {
     return;
 }
 
-sub val {
-  my ($self, $sect, $parm, $def) = @_;
+sub val
+{
+    my ($self, $sect, $parm, $def) = @_;
 
-  # Always return undef on bad parameters
-  return if not defined $sect;
-  return if not defined $parm;
- 
-  $self->_caseify(\$sect, \$parm);
+    # Always return undef on bad parameters
+    if (not (defined($sect) && defined($parm)))
+    {
+        return;
+    }
 
-  my $val = defined($self->{v}{$sect}{$parm}) ?
-    $self->{v}{$sect}{$parm} :
-    $self->{v}{$self->{default}}{$parm};
-  
-  # If the value is undef, make it $def instead (which could just be undef)
-  $val = $def unless defined $val;
-  
-  # Return the value in the desired context
-  if (wantarray) {
-    if (ref($val) eq "ARRAY") {
-      return @$val;
-    } elsif (defined($val)) {
-      return $val;
-    } else {
-      return;
+    $self->_caseify(\$sect, \$parm);
+
+    my $val_sect =
+        defined($self->{v}{$sect}{$parm})
+            ? $sect
+            : $self->{default}
+            ;
+
+    my $val = $self->{v}{$val_sect}{$parm};
+
+    # If the value is undef, make it $def instead (which could just be undef)
+    if (!defined ($val))
+    {
+        $val = $def;
     }
-  } elsif (ref($val) eq "ARRAY") {
-    if (defined ($/)) {
-        return join "$/", @$val;
-    } else {
-        return join "\n", @$val;
+
+    # Return the value in the desired context
+    if (wantarray)
+    {
+        if (ref($val) eq "ARRAY")
+        {
+            return @$val;
+        }
+        elsif (defined($val))
+        {
+            return $val;
+        }
+        else
+        {
+            return;
+        }
     }
-  } else {
-    return $val;
-  }
+    elsif (ref($val) eq "ARRAY")
+    {
+        return join( (defined($/) ? $/ : "\n"), @$val);
+    }
+    else
+    {
+        return $val;
+    }
 }
-
-
 
 =head2 exists($section, $parameter)
 
-True if and only if there exists a section C<$section>, with 
+True if and only if there exists a section C<$section>, with
 a parameter C<$parameter> inside, not counting default values.
 
 =cut
@@ -616,8 +631,8 @@ sub push {
 
 =head2 setval ($section, $parameter, $value, [ $value2, ... ])
 
-Sets the value of parameter C<$parameter> in section C<$section> to 
-C<$value> (or to a set of values).  See below for methods to write 
+Sets the value of parameter C<$parameter> in section C<$section> to
+C<$value> (or to a set of values).  See below for methods to write
 the new configuration back out to a file.
 
 You may not set a parameter that didn't exist in the original
@@ -653,8 +668,8 @@ sub setval {
 
 =head2 newval($section, $parameter, $value [, $value2, ...])
 
-Assignes a new value, C<$value> (or set of values) to the 
-parameter C<$parameter> in section C<$section> in the configuration 
+Assignes a new value, C<$value> (or set of values) to the
+parameter C<$parameter> in section C<$section> in the configuration
 file.
 
 =cut
@@ -674,7 +689,7 @@ sub newval {
 
     if (none { $_ eq $parm } @{$self->{parms}{$sect}})
     {
-        CORE::push(@{$self->{parms}{$sect}}, $parm) 
+        CORE::push(@{$self->{parms}{$sect}}, $parm)
     }
 
     $self->_touch_parameter($sect, $parm);
@@ -715,13 +730,13 @@ sub delval {
 
 =head2 ReadConfig
 
-Forces the configuration file to be re-read. Returns undef if the 
+Forces the configuration file to be re-read. Returns undef if the
 file can not be opened, no filename was defined (with the C<-file>
-option) when the object was constructed, or an error occurred while 
+option) when the object was constructed, or an error occurred while
 reading.
 
 If an error occurs while parsing the INI file the @Config::IniFiles::errors
-array will contain messages that might help you figure out where the 
+array will contain messages that might help you figure out where the
 problem is in the file.
 
 =cut
@@ -773,7 +788,7 @@ sub _nextline {
                 if ($nextchar eq "\x0a") {
                     $self->{line_ends} .= "\x0a";
                 } else {
-                    seek $fh, -1, 1;
+                    seek $fh, -1, SEEK_CUR();
                 }
             }
         }
@@ -800,7 +815,7 @@ sub _rollback {
     close($fh);
   } else {
     # Attempt to rollback to beginning, no problem if this fails (e.g. STDIN)
-    seek( $fh, 0, 0 );
+    seek( $fh, 0, SEEK_SET() );
   } # end if
 }
 
@@ -811,207 +826,486 @@ sub _no_filename
     return not length $self->{cf};
 }
 
+sub _read_line_num
+{
+    my $self = shift;
 
-sub ReadConfig {
-  my $self = shift;
-
-  my($lineno, $sect);
-  my($group, $groupmem);
-  my($parm, $val);
-  my @cmts;
-  my $end_comment;
-
-  @Config::IniFiles::errors = ( );
-
-  # Initialize (and clear out) storage hashes
-  $self->{sects}  = [];
-  $self->{parms}  = {};
-  $self->{group}  = {};
-  $self->{v}      = {};
-  $self->{sCMT}   = {};
-  $self->{pCMT}   = {};
-  $self->{EOT}    = {};
-  $self->{mysects} = []; # A pair of hashes to remember which params are loaded
-  $self->{myparms} = {}; # or set using the API vs. imported - useful for
-  $self->{peCMT}  = {};  # this will store trailing comments at the end of single-lined params
-  # import shadowing, see below, and WriteConfig(-delta=>1)
-
-  if( defined $self->{imported} ) {
-      # Run up the import tree to the top, then reload coming
-      # back down, maintaining the imported file names and our 
-      # file name.
-      # This is only needed on a re-load though
-      $self->{imported}->ReadConfig() unless ($self->{firstload});
-
-      foreach my $field (qw(sects parms group v sCMT pCMT EOT)) {
-          $self->{$field} = _deepcopy($self->{imported}->{$field});
-      }
-  } # end if
-  
-  if ($self->_no_filename)
-  {
-      return 1;
-  }
-  
-  my $nocase = $self->_nocase;
-  my $end_commenthandle = $self->{handle_trailing_comment};
-
-  # If this is a reload and we want warnings then send one to the STDERR log
-  unless( $self->{firstload} || !$self->{reloadwarn} ) {
-    my ($ss, $mm, $hh, $DD, $MM, $YY) = (localtime(time))[0..5];
-    printf STDERR
-      "PID %d reloading config file %s at %d.%02d.%02d %02d:%02d:%02d\n",
-      $$, $self->{cf}, $YY+1900, $MM+1, $DD, $hh, $mm, $ss;
-  }
-  
-  # Turn off. Future loads are reloads
-  $self->{firstload} = 0;
-
-  # Get a filehandle, allowing almost any type of 'file' parameter
-  my $fh = $self->_make_filehandle( $self->{cf} );
-  if (!$fh) {
-    carp "Failed to open $self->{cf}: $!";
-    return undef;
-  }
-  
-  # Get mod time of file so we can retain it (if not from STDIN)
-  # also check if it's a real file (could have been a filehandle made from a scalar).
-  if (ref($fh) ne "IO::Scalar" && -e $fh)
-  {
-    my @stats = stat $fh;
-    $self->{file_mode} = sprintf("%04o", $stats[2]) if defined $stats[2];
-  }
-  
-  
-  # The first lines of the file must be blank, comments or start with [
-  my $first = '';
-  my $allCmt = $self->{allowed_comment_char};
-  
-  local $_;
-  delete $self->{line_ends}; # Marks start of parsing for _nextline()
-  while ( defined($_ = $self->_nextline($fh)) ) {
-    s/(\015\012?|\012|\025|\n)$//;              # remove line ending char(s)
-    $lineno++;
-    if (/^\s*$/) {              # ignore blank lines
-      next;
+    if (@_)
+    {
+        $self->{_read_line_num} = shift;
     }
-    elsif (/^\s*[$allCmt]/) {           # collect comments
-        if ($self->{negativedeltas} &&
-            m/^$self->{comment_char} (.*) is deleted$/) {
-            my $todelete=$1;
-            if ($todelete =~ m/^\[(.*)\]$/) {
-                $self->DeleteSection($1);
-            } else {
-                $self->delval($sect, $todelete);
-            }
-        } else {
-            CORE::push(@cmts, $_);
+
+    return $self->{_read_line_num};
+}
+
+# Reads the next line and removes the end of line from it.
+sub _read_next_line
+{
+    my ($self, $fh) = @_;
+
+    my $line = $self->_nextline($fh);
+
+    if (! defined($line))
+    {
+        return undef;
+    }
+
+    $self->_read_line_num( $self->_read_line_num() + 1);
+
+    # Remove line ending char(s)
+    $line =~ s/(\015\012?|\012|\025|\n)\z//;
+
+    return $line;
+}
+
+sub _add_error
+{
+    my ($self, $msg) = @_;
+
+    CORE::push(@Config::IniFiles::errors, $msg);
+
+    return;
+}
+
+# The current section - used for parsing.
+sub _curr_sect
+{
+    my $self = shift;
+
+    if (@_)
+    {
+        $self->{_curr_sect} = shift;
+    }
+
+    return $self->{_curr_sect};
+}
+
+# The current parameter - used for parsing.
+sub _curr_parm
+{
+    my $self = shift;
+
+    if (@_)
+    {
+        $self->{_curr_parm} = shift;
+    }
+
+    return $self->{_curr_parm};
+}
+
+# Current location - section and parameter.
+sub _curr_loc
+{
+    my $self = shift;
+
+    return ($self->_curr_sect, $self->_curr_parm);
+}
+
+# The current value - used in parsing.
+sub _curr_val
+{
+    my $self = shift;
+
+    if (@_)
+    {
+        $self->{_curr_val} = shift;
+    }
+
+    return $self->{_curr_val};
+}
+
+sub _curr_cmts
+{
+    my $self = shift;
+
+    if (@_)
+    {
+        $self->{_curr_cmts} = shift;
+    }
+
+    return $self->{_curr_cmts};
+}
+
+sub _curr_end_comment
+{
+    my $self = shift;
+
+    if (@_)
+    {
+        $self->{_curr_end_comment} = shift;
+    }
+
+    return $self->{_curr_end_comment};
+}
+
+my $RET_CONTINUE = 1;
+my $RET_BREAK;
+
+sub _ReadConfig_handle_comment
+{
+    my ($self, $line) = @_;
+
+    if ($self->{negativedeltas} and
+        my ($to_delete) = $line =~ m/\A$self->{comment_char} (.*) is deleted\z/
+    )
+    {
+        if (my ($sect) = $to_delete =~ m/\A\[(.*)\]\z/)
+        {
+            $self->DeleteSection($sect);
         }
-        next;
-    }
-    elsif (/^\s*\[\s*(\S|\S.*\S)\s*\]\s*$/) {       # New Section
-      $sect = $1;
-      $self->_caseify(\$sect);
-      $self->AddSection($sect);
-      $self->SetSectionComment($sect, @cmts);
-      @cmts = ();
-    }
-    elsif (($parm, $val) = /^\s*([^=]*?[^=\s])\s*=\s*(.*)$/) {  # new parameter
-        if ((!defined($sect)) and defined($self->{fallback}))
-        { 
-            $sect = $self->{fallback};
-            $self->{fallback_used}++;
+        else
+        {
+            $self->delval($self->_curr_sect, $to_delete);
         }
-        if (!defined $sect) {
-            CORE::push(@Config::IniFiles::errors, sprintf('%d: %s', $lineno,
-                qq#parameter found outside a section#));
-            $self->_rollback($fh);
+    }
+    else
+    {
+        CORE::push(@{$self->_curr_cmts}, $line);
+    }
+
+    return $RET_CONTINUE;
+}
+
+sub _ReadConfig_new_section
+{
+    my ($self, $sect) = @_;
+
+    $self->_caseify(\$sect);
+
+    $self->_curr_sect($sect);
+    $self->AddSection($self->_curr_sect);
+    $self->SetSectionComment($self->_curr_sect, @{$self->_curr_cmts});
+    $self->_curr_cmts([]);
+
+    return $RET_CONTINUE;
+}
+
+sub _handle_fallback_sect
+{
+    my ($self) = @_;
+
+    if ((!defined($self->_curr_sect)) and defined($self->{fallback}))
+    {
+        $self->_curr_sect($self->{fallback});
+        $self->{fallback_used}++;
+    }
+
+    return;
+}
+
+sub _ReadConfig_load_value
+{
+    my ($self, $val_aref) = @_;
+
+    # Now load value
+    if (exists $self->{v}{$self->_curr_sect}{$self->_curr_parm} &&
+        exists $self->{myparms}{$self->_curr_sect} &&
+        $self->_is_parm_in_sect($self->_curr_loc))
+    {
+        $self->push($self->_curr_loc, @$val_aref);
+    }
+    else
+    {
+        # Loaded parameters shadow imported ones, instead of appending
+        # to them
+        $self->newval($self->_curr_loc, @$val_aref);
+    }
+
+    return;
+}
+
+sub _test_for_fallback_or_no_sect
+{
+    my ($self, $fh) = @_;
+
+    $self->_handle_fallback_sect;
+
+    if (!defined $self->_curr_sect) {
+        $self->_add_error(
+            sprintf('%d: %s', $self->_read_line_num(),
+                qq#parameter found outside a section#
+            )
+        );
+        $self->_rollback($fh);
+        return $RET_BREAK;
+    }
+
+    return $RET_CONTINUE;
+}
+
+sub _ReadConfig_handle_here_doc_param
+{
+    my ($self, $fh, $eotmark, $val_aref) = @_;
+
+    my $foundeot = 0;
+    my $startline = $self->_read_line_num();
+
+    HERE_DOC_LOOP:
+    while (defined( my $line = $self->_read_next_line($fh) ))
+    {
+        if ($line eq $eotmark)
+        {
+            $foundeot = 1;
+            last HERE_DOC_LOOP;
+        }
+        else
+        {
+            # Untaint
+            my ($contents) = $line =~ /(.*)/ms;
+            CORE::push(@$val_aref, $contents);
+        }
+    }
+
+    if (! $foundeot)
+    {
+        $self->_add_error(sprintf('%d: %s', $startline,
+                qq#no end marker ("$eotmark") found#));
+        $self->_rollback();
+        return $RET_BREAK;
+    }
+
+    return $RET_CONTINUE;
+}
+
+sub _ReadConfig_handle_non_here_doc_param
+{
+    my ($self, $fh, $val_aref) = @_;
+
+    my $allCmt = $self->{allowed_comment_char};
+    my $end_commenthandle = $self->{handle_trailing_comment};
+
+    # process continuation lines, if any
+    $self->_process_continue_val($fh);
+
+    # we should split value and comments if there is any comment
+    if ($end_commenthandle and
+        my ($value_to_assign, $end_comment_to_assign) = $self->_curr_val =~ /(.*?)\s*[$allCmt]\s*([^$allCmt]*)$/)
+    {
+        $self->_curr_val($value_to_assign);
+        $self->_curr_end_comment($end_comment_to_assign);
+    }
+    else
+    {
+        $self->_curr_end_comment(q{});
+    }
+
+    @{$val_aref} = ($self->_curr_val);
+
+    return;
+}
+
+
+sub _ReadConfig_populate_values
+{
+    my ($self, $val_aref, $eotmark) = @_;
+
+    $self->_ReadConfig_load_value($val_aref);
+
+    $self->SetParameterComment($self->_curr_loc, @{ $self->_curr_cmts });
+    $self->_curr_cmts([]);
+    if (defined $eotmark)
+    {
+        $self->SetParameterEOT($self->_curr_loc, $eotmark);
+    }
+    # if handle_trailing_comment is off, this line makes no sense, since all $end_comment=""
+    $self->SetParameterTrailingComment($self->_curr_loc, $self->_curr_end_comment);
+
+    return;
+}
+
+sub _ReadConfig_param_assignment
+{
+    my ($self, $fh, $line, $parm, $value_to_assign) = @_;
+
+    $self->_curr_val($value_to_assign);
+    $self->_curr_end_comment(undef());
+
+    if (!defined( $self->_test_for_fallback_or_no_sect($fh) ))
+    {
+        return $RET_BREAK;
+    }
+
+    $self->_caseify(\$parm);
+    $self->_curr_parm($parm);
+
+    my @val = ( );
+    my $eotmark;
+
+    if (($eotmark) = $self->_curr_val =~ /\A<<(.*)$/)
+    {
+        if (! defined($self->_ReadConfig_handle_here_doc_param(
+                    $fh, $eotmark, \@val
+                ))
+        )
+        {
+            return $RET_BREAK;
+        }
+    }
+    else
+    {
+        $self->_ReadConfig_handle_non_here_doc_param( $fh, \@val );
+    }
+
+    $self->_ReadConfig_populate_values(\@val, $eotmark);
+
+    return $RET_CONTINUE;
+}
+
+# Return 1 to continue - undef to terminate the loop.
+sub _ReadConfig_handle_line
+{
+    my ($self, $fh, $line) = @_;
+
+    my $allCmt = $self->{allowed_comment_char};
+
+    # ignore blank lines
+    if ($line =~ /\A\s*\z/)
+    {
+        return $RET_CONTINUE;
+    }
+
+    # collect comments
+    if ($line =~/\A\s*[$allCmt]/)
+    {
+        return $self->_ReadConfig_handle_comment($line);
+    }
+
+    # New Section
+    if (my ($sect) = $line =~ /\A\s*\[\s*(\S|\S.*\S)\s*\]\s*\z/)
+    {
+        return $self->_ReadConfig_new_section($sect);
+    }
+
+    # New parameter
+    if (my ($parm, $value_to_assign) = $line =~ /^\s*([^=]*?[^=\s])\s*=\s*(.*)$/)
+    {
+        return $self->_ReadConfig_param_assignment($fh, $line, $parm, $value_to_assign);
+    }
+
+    $self->_add_error(
+        sprintf("Line %d in file %s is mal-formed:\n\t\%s",
+            $self->_read_line_num(), $self->GetFileName(), $line
+        )
+    );
+
+    return $RET_CONTINUE;
+}
+
+sub _ReadConfig_lines_loop
+{
+    my ($self, $fh) = @_;
+
+    $self->_curr_sect(undef());
+    $self->_curr_parm(undef());
+    $self->_curr_val(undef());
+    $self->_curr_cmts([]);
+
+    while ( defined(my $line = $self->_read_next_line($fh)) )
+    {
+        if (!defined(
+                scalar( $self->_ReadConfig_handle_line($fh, $line) )
+            )
+        )
+        {
             return undef;
         }
-
-      $parm = lc($parm) if $nocase;
-      my @val = ( );
-      my $eotmark;
-      if ($val =~ /^<<(.*)$/) {         # "here" value
-       $eotmark  = $1;
-    my $foundeot = 0;
-    my $startline = $lineno;
-    while ( defined($_=$self->_nextline($fh)) ) {
-      s/(\015\012?|\012|\025|\n)$//;                # remove line ending char(s)
-      $lineno++;
-      if ($_ eq $eotmark) {
-        $foundeot = 1;
-        last;
-      } else {
-        # Untaint
-        /(.*)/ms; 
-        CORE::push(@val, $1);
-      }
     }
-    if (! $foundeot) {
-      CORE::push(@Config::IniFiles::errors, sprintf('%d: %s', $startline,
-                  qq#no end marker ("$eotmark") found#));
-      $self->_rollback();
-      return undef;
+
+    return 1;
+}
+
+sub ReadConfig
+{
+    my $self = shift;
+
+    @Config::IniFiles::errors = ( );
+
+    # Initialize (and clear out) storage hashes
+    $self->{sects}  = [];
+    $self->{parms}  = {};
+    $self->{group}  = {};
+    $self->{v}      = {};
+    $self->{sCMT}   = {};
+    $self->{pCMT}   = {};
+    $self->{EOT}    = {};
+    $self->{mysects} = []; # A pair of hashes to remember which params are loaded
+    $self->{myparms} = {}; # or set using the API vs. imported - useful for
+    $self->{peCMT}  = {};  # this will store trailing comments at the end of single-lined params
+    # import shadowing, see below, and WriteConfig(-delta=>1)
+
+    if( defined $self->{imported} ) {
+        # Run up the import tree to the top, then reload coming
+        # back down, maintaining the imported file names and our
+        # file name.
+        # This is only needed on a re-load though
+        $self->{imported}->ReadConfig() unless ($self->{firstload});
+
+        foreach my $field (qw(sects parms group v sCMT pCMT EOT)) {
+            $self->{$field} = _deepcopy($self->{imported}->{$field});
+        }
+    } # end if
+
+    if ($self->_no_filename)
+    {
+        return 1;
     }
-      } else { # no here value
 
-        # process continuation lines, if any
-        while($self->{allowcontinue} && $val =~ s/\\$//) {
-          $_ = $self->_nextline($fh);
-      s/(\015\012?|\012|\025|\n)$//; # remove line ending char(s)
-      $lineno++;
-          $val .= $_;
-        }
-
-        # we should split value and comments if there is any comment
-        if ($end_commenthandle &&
-            $val =~ /(.*?)\s*[$allCmt]\s*([^$allCmt]*)$/) {
-            $val = $1;
-            $end_comment = $2;
-        } else {
-            $end_comment = "";
-        }
-
-        @val = $val;
-      }
-        # Now load value
-        if (exists $self->{v}{$sect}{$parm} && 
-            exists $self->{myparms}{$sect} && 
-            $self->_is_parm_in_sect($sect, $parm)) {
-            $self->push($sect, $parm, @val);
-        } else {
-            # Loaded parameters shadow imported ones, instead of appending
-            # to them
-            $self->newval($sect, $parm, @val);
-        }
-        $self->SetParameterComment($sect, $parm, @cmts);
-        @cmts = ( );
-        $self->SetParameterEOT($sect,$parm,$eotmark) if (defined $eotmark);
-        # if handle_trailing_comment is off, this line makes no sense, since all $end_comment=""
-        $self->SetParameterTrailingComment($sect, $parm, $end_comment);
-
-    } else {
-      CORE::push(@Config::IniFiles::errors, sprintf("Line \%d in file " . $self->{cf} . " is mal-formed:\n\t\%s", $lineno, $_));
+    # If this is a reload and we want warnings then send one to the STDERR log
+    unless( $self->{firstload} || !$self->{reloadwarn} ) {
+        my ($ss, $mm, $hh, $DD, $MM, $YY) = (localtime(time))[0..5];
+        printf STDERR
+        "PID %d reloading config file %s at %d.%02d.%02d %02d:%02d:%02d\n",
+        $$, $self->{cf}, $YY+1900, $MM+1, $DD, $hh, $mm, $ss;
     }
-  } # End main parsing loop
 
-  # Special case: return undef if file is empty. (suppress this line to
-  # restore the more intuitive behaviour of accepting empty files)
-  if (! keys %{$self->{v}} && ! $self->{allowempty}) {
-      CORE::push @Config::IniFiles::errors, "Empty file treated as error";
-      $self->_rollback($fh);
-      return undef;
-  }
+    # Turn off. Future loads are reloads
+    $self->{firstload} = 0;
 
-  if( defined (my $defaultsect=$self->{startup_settings}->{-default}) ) {
-      $self->AddSection($defaultsect);
-  } # end if
+    # Get a filehandle, allowing almost any type of 'file' parameter
+    my $fh = $self->_make_filehandle( $self->{cf} );
+    if (!$fh) {
+        carp "Failed to open $self->{cf}: $!";
+        return undef;
+    }
 
-  $self->_SetEndComments(@cmts);
+    # Get mod time of file so we can retain it (if not from STDIN)
+    # also check if it's a real file (could have been a filehandle made from a scalar).
+    if (ref($fh) ne "IO::Scalar" && -e $fh)
+    {
+        my @stats = stat $fh;
+        $self->{file_mode} = sprintf("%04o", $stats[2]) if defined $stats[2];
+    }
 
-  $self->_rollback($fh);
-  @Config::IniFiles::errors ? undef : 1;
+
+    # The first lines of the file must be blank, comments or start with [
+    my $first = '';
+
+    delete $self->{line_ends}; # Marks start of parsing for _nextline()
+
+    $self->_read_line_num(0);
+
+    if (!defined($self->_ReadConfig_lines_loop($fh)))
+    {
+        return undef;
+    }
+
+    # Special case: return undef if file is empty. (suppress this line to
+    # restore the more intuitive behaviour of accepting empty files)
+    if (! keys %{$self->{v}} && ! $self->{allowempty}) {
+        $self->_add_error("Empty file treated as error");
+        $self->_rollback($fh);
+        return undef;
+    }
+
+    if ( defined (my $defaultsect=$self->{startup_settings}->{-default}) )
+    {
+        $self->AddSection($defaultsect);
+    }
+
+    $self->_SetEndComments(@{ $self->_curr_cmts });
+
+    $self->_rollback($fh);
+    return (@Config::IniFiles::errors ? undef : 1);
 }
 
 
@@ -1024,9 +1318,9 @@ created, the section names will be returned in lowercase.
 =cut
 
 sub Sections {
-  my $self = shift;
-  return @{$self->{sects}} if ref $self->{sects} eq 'ARRAY';
-  return ();
+    my $self = shift;
+
+    return @{_aref_or_empty($self->{sects})};
 }
 
 =head2 SectionExists ( $sect_name )
@@ -1038,9 +1332,9 @@ Returns 1 if the specified section exists in the INI file, 0 otherwise (undefine
 sub SectionExists {
     my $self = shift;
     my $sect = shift;
-    
+
     return undef if not defined $sect;
-    
+
     $self->_caseify(\$sect);
 
     return ((any { $_ eq $sect } @{$self->{sects}}) ? 1 : 0);
@@ -1057,24 +1351,17 @@ the name that you're adding isn't in the list of sections already.
 
 =cut
 
-sub AddSection {
+sub _AddSection_Helper
+{
     my ($self, $sect) = @_;
-    
-    return undef if not defined $sect;
 
-    $self->_caseify(\$sect);
-
-    return if $self->SectionExists($sect);
     CORE::push @{$self->{sects}}, $sect;
     $self->_touch_section($sect);
 
     $self->SetGroupMember($sect);
-    
+
     # Set up the parameter names and values lists
-    if (ref($self->{parms}{$sect}) ne 'ARRAY')
-    {
-        $self->{parms}{$sect} = [];
-    }
+    $self->{parms}{$sect} ||= [];
 
     if (!defined($self->{v}{$sect})) {
         $self->{sCMT}{$sect} = [];
@@ -1082,6 +1369,23 @@ sub AddSection {
         $self->{parms}{$sect} = [];
         $self->{v}{$sect} = {};
     }
+
+    return;
+}
+
+sub AddSection {
+    my ($self, $sect) = @_;
+
+    return undef if not defined $sect;
+
+    $self->_caseify(\$sect);
+
+    if ( $self->SectionExists($sect))
+    {
+        return;
+    }
+
+    return $self->_AddSection_Helper($sect);
 }
 
 # Marks a section as modified by us (this includes deleted by us).
@@ -1124,9 +1428,9 @@ Completely removes the entire section from the configuration.
 sub DeleteSection {
     my $self = shift;
     my $sect = shift;
-    
+
     return undef if not defined $sect;
-    
+
     $self->_caseify(\$sect);
 
     # This is done the fast way, change if data structure changes!!
@@ -1137,7 +1441,7 @@ sub DeleteSection {
     delete $self->{parms}{$sect};
     delete $self->{myparms}{$sect};
 
-    @{$self->{sects}} = grep !/^\Q$sect\E$/, @{$self->{sects}};
+    $self->{sects} = [grep {$_ ne $sect} @{$self->{sects}}];
     $self->_touch_section($sect);
 
     $self->RemoveGroupMember($sect);
@@ -1152,22 +1456,28 @@ section.
 
 =cut
 
-sub Parameters {
-  my $self = shift;
-  my $sect = shift;
-  
-  return undef if not defined $sect;
-  
-  $self->_caseify(\$sect);
+sub _aref_or_empty
+{
+    my ($aref) = @_;
 
-  return @{$self->{parms}{$sect}} if ref $self->{parms}{$sect} eq 'ARRAY';
-  return ();
+    return ((defined($aref) and ref($aref) eq 'ARRAY') ? $aref : []);
+}
+
+sub Parameters {
+    my $self = shift;
+    my $sect = shift;
+
+    return undef if not defined $sect;
+
+    $self->_caseify(\$sect);
+
+    return @{_aref_or_empty($self->{parms}{$sect})};
 }
 
 =head2 Groups
 
 Returns an array containing the names of available groups.
-  
+
 Groups are specified in the config file as new sections of the form
 
   [GroupName MemberName]
@@ -1179,10 +1489,18 @@ Groups is to aid people building more complex configuration files.
 
 =cut
 
-sub Groups  {
-  my $self = shift;
-  return keys %{$self->{group}} if ref $self->{group} eq 'HASH';
-  return ();
+sub Groups
+{
+    my $self = shift;
+
+    if (ref($self->{group}) eq 'HASH')
+    {
+        return keys %{$self->{group}};
+    }
+    else
+    {
+        return ();
+    }
 }
 
 =head2 SetGroupMember ( $sect )
@@ -1193,21 +1511,41 @@ Only intended for use in newval.
 
 =cut
 
-sub SetGroupMember {
-    my $self = shift;
-    my $sect = shift;
-    
+sub _group_member_handling_skeleton
+{
+    my ($self, $sect, $method) = @_;
+
     return undef if not defined $sect;
-    
-    return(1) unless $sect =~ /^(\S+)\s+\S+/;
-    
-    my $group = $1;
+
+    if (! (my ($group) = ($sect =~ /\A(\S+)\s+\S/)))
+    {
+        return 1;
+    }
+    else
+    {
+        return $self->$method($sect, $group);
+    }
+}
+
+sub _SetGroupMember_helper
+{
+    my ($self, $sect, $group) = @_;
+
     if (not exists($self->{group}{$group})) {
         $self->{group}{$group} = [];
     }
-    if (not grep {/^\Q$sect\E$/} @{$self->{group}{$group}}) {
+
+    if (none {$_ eq $sect} @{$self->{group}{$group}}) {
         CORE::push @{$self->{group}{$group}}, $sect;
     }
+
+    return;
+}
+
+sub SetGroupMember {
+    my ($self, $sect) = @_;
+
+    return $self->_group_member_handling_skeleton($sect, '_SetGroupMember_helper');
 }
 
 =head2 RemoveGroupMember ( $sect )
@@ -1217,21 +1555,26 @@ appropriate group. Only intended for use in DeleteSection.
 
 =cut
 
-sub RemoveGroupMember {
-    my $self = shift;
-    my $sect = shift;
-    
-    return undef if not defined $sect;
-    
-    return(1) unless $sect =~ /^(\S+)\s+\S+/;
-    
-    my $group = $1;
-    return unless exists $self->{group}{$group};
+sub _RemoveGroupMember_helper
+{
+    my ($self, $sect, $group) = @_;
+
+    if (!exists $self->{group}{$group})
+    {
+        return;
+    }
 
     $self->{group}{$group} =
         [grep { $_ ne $sect } @{$self->{group}{$group}}];
 
     return;
+}
+
+sub RemoveGroupMember
+{
+    my ($self, $sect) = @_;
+
+    return $self->_group_member_handling_skeleton($sect, '_RemoveGroupMember_helper');
 }
 
 =head2 GroupMembers ($group)
@@ -1250,15 +1593,13 @@ GroupMembers would return ("Group Element 1", "Group Element 2").
 =cut
 
 sub GroupMembers {
-  my $self  = shift;
-  my $group = shift;
-  
-  return undef if not defined $group;
-  
-  $self->_caseify(\$group);
+    my ($self, $group) = @_;
 
-  return @{$self->{group}{$group}} if ref $self->{group}{$group} eq 'ARRAY';
-  return ();
+    return undef if not defined $group;
+
+    $self->_caseify(\$group);
+
+    return @{_aref_or_empty($self->{group}{$group})};
 }
 
 =head2 SetWriteMode ($mode)
@@ -1271,12 +1612,14 @@ $mode must be a string representation of the octal mode.
 
 sub SetWriteMode
 {
-    my $self = shift;
-    my $mode = shift;
-    return undef if not defined ($mode);
-    return undef if not ($mode =~ m/[0-7]{3,3}/);
-    $self->{file_mode} = $mode;
-    return $mode;
+    my ($self, $mode) = @_;
+
+    if (not (defined($mode) && ($mode =~ m/[0-7]{3}/)))
+    {
+        return undef;
+    }
+
+    return ($self->{file_mode} = $mode);
 }
 
 =head2 GetWriteMode ($mode)
@@ -1290,7 +1633,7 @@ $mode is a string representation of the octal mode.
 sub GetWriteMode
 {
     my $self = shift;
-    return undef if not exists $self->{file_mode};
+
     return $self->{file_mode};
 }
 
@@ -1313,67 +1656,92 @@ Returns true on success, C<undef> on failure.
 
 =cut
 
+sub _write_config_to_filename
+{
+    my ($self, $filename, %parms) = @_;
+
+    if (-e $filename) {
+        if (not (-w $filename))
+        {
+            #carp "File $filename is not writable.  Refusing to write config";
+            return undef;
+        }
+        my $mode = (stat $filename)[2];
+        $self->{file_mode} = sprintf "%04o", ($mode & 0777);
+        #carp "Using mode $self->{file_mode} for file $file";
+    }
+
+    my ($fh, $new_file) = tempfile(
+        "temp.ini-XXXXXXXXXX",
+        DIR => dirname($filename)
+    );
+    $self->OutputConfigToFileHandle($fh, $parms{-delta});
+    close($fh);
+    if (!rename( $new_file, $filename )) {
+        carp "Unable to rename temp config file ($new_file) to ${filename}: $!";
+        return undef;
+    }
+    if (exists $self->{file_mode}) {
+        chmod oct($self->{file_mode}), $filename;
+    }
+
+    return 1;
+}
+
+sub _write_config_with_a_made_fh
+{
+    my ($self, $fh, %parms) = @_;
+
+    # Only roll back if it's not STDIN (if it is, Carp)
+    if( $fh == \*STDIN )
+    {
+        carp "Cannot write configuration file to STDIN.";
+    }
+    else
+    {
+        seek( $fh, 0, SEEK_SET() );
+        $self->OutputConfigToFileHandle($fh, $parms{-delta});
+        seek( $fh, 0, SEEK_SET() );
+    } # end if
+
+    return 1;
+}
+
+sub _write_config_to_fh
+{
+    my ($self, $file, %parms) = @_;
+
+    # Get a filehandle, allowing almost any type of 'file' parameter
+    ## NB: If this were a filename, this would fail because _make_file
+    ##     opens a read-only handle, but we have already checked that case
+    ##     so re-using the logic is ok [JW/WADG]
+    my $fh = $self->_make_filehandle( $file );
+
+    if (!$fh) {
+        carp "Could not find a filehandle for the input stream ($file): $!";
+        return undef;
+    }
+
+    return $self->_write_config_with_a_made_fh($fh, %parms);
+}
+
 sub WriteConfig {
     my ($self, $file, %parms) = @_;
 
     return undef unless defined $file;
 
-    # If we are using a filename, then do mode checks and write to a 
+    # If we are using a filename, then do mode checks and write to a
     # temporary file to avoid a race condition
-    if( !ref($file) ) {
-        if (-e $file) {
-            if (not (-w $file))
-            {
-                #carp "File $file is not writable.  Refusing to write config";
-                return undef;
-            }
-            my $mode = (stat $file)[2];
-            $self->{file_mode} = sprintf "%04o", ($mode & 0777);
-            #carp "Using mode $self->{file_mode} for file $file";
-        } elsif (defined($self->{file_mode}) and not (oct($self->{file_mode}) & 0222)) {
-            #carp "Store mode $self->{file_mode} prohibits writing config";
-        }
-
-        my ($fh, $new_file) = tempfile(
-            "temp.ini-XXXXXXXXXX",
-            DIR => dirname($file)
-        );
-        $self->OutputConfigToFileHandle($fh, $parms{-delta});
-        close($fh);
-        if (!rename( $new_file, $file )) {
-            carp "Unable to rename temp config file ($new_file) to $file: $!";
-            return undef;
-        }
-        if (exists $self->{file_mode}) {
-            chmod oct($self->{file_mode}), $file;
-        }
-
-    } # Otherwise, reset to the start of the file and write, unless we are using STDIN
-    else {
-        # Get a filehandle, allowing almost any type of 'file' parameter
-        ## NB: If this were a filename, this would fail because _make_file 
-        ##     opens a read-only handle, but we have already checked that case
-        ##     so re-using the logic is ok [JW/WADG]
-        my $fh = $self->_make_filehandle( $file );
-        if (!$fh) {
-            carp "Could not find a filehandle for the input stream ($file): $!";
-            return undef;
-        }
-
-
-        # Only roll back if it's not STDIN (if it is, Carp)
-        if( $fh == \*STDIN ) {
-            carp "Cannot write configuration file to STDIN.";
-        } else {
-            seek( $fh, 0, 0 );
-            $self->OutputConfigToFileHandle($fh, $parms{-delta});
-            seek( $fh, 0, 0 );
-        } # end if
-
-    } # end if (filehandle/name)
-
-    return 1;
-  
+    if( !ref($file) )
+    {
+        return $self->_write_config_to_filename($file, %parms);
+    }
+    # Otherwise, reset to the start of the file and write, unless we are using
+    # STDIN
+    else
+    {
+        return $self->_write_config_to_fh($file, %parms);
+    }
 }
 
 =head2 RewriteConfig
@@ -1433,7 +1801,7 @@ sub SetFileName {
 =head2 $ini->OutputConfigToFileHandle($fh, $delta)
 
 Writes OutputConfig to the $fh filehandle. $delta should be set to 1
-1 if writing only delta. This is a newer and safer version of 
+1 if writing only delta. This is a newer and safer version of
 C<OutputConfig()> and one is encouraged to use it instead.
 
 =head2 $ini->OutputConfig($delta)
@@ -1516,6 +1884,26 @@ sub _output_comments
     return;
 }
 
+sub _process_continue_val
+{
+    my ($self, $fh) = @_;
+
+    if (not $self->{allowcontinue})
+    {
+        return;
+    }
+
+    my $val = $self->_curr_val;
+
+    while($val =~ s/\\\z//) {
+        $val .= $self->_read_next_line($fh);
+    }
+
+    $self->_curr_val($val);
+
+    return;
+}
+
 sub _output_param_total
 {
     my ($self, $sect, $parm, $print_line, $split_val, $delta) = @_;
@@ -1538,7 +1926,7 @@ sub _output_param_total
 
     $self->_OutputParam(
         $sect,
-        $parm, 
+        $parm,
         $split_val->($val),
         (defined($end_comment) ? $end_comment : ""),
         $print_line,
@@ -1575,7 +1963,7 @@ sub _output_section {
             $sect, $parm, $print_line, $split_val, $delta
         );
     }
-    
+
     return;
 }
 
@@ -1645,7 +2033,7 @@ sub SetSectionComment
 
 # this helper makes sure that each line is preceded with the correct comment
 # character
-sub _markup_comments 
+sub _markup_comments
 {
     my ($self, $comment_aref) = @_;
 
@@ -1662,7 +2050,7 @@ sub _markup_comments
 
 =head2 GetSectionComment ($section)
 
-Returns a list of lines, being the comment attached to section $section. In 
+Returns a list of lines, being the comment attached to section $section. In
 scalar context, returns a string containing the lines of the comment separated
 by newlines.
 
@@ -1685,7 +2073,7 @@ sub GetSectionComment
     my ($self, $sect) = @_;
 
     return undef if not defined $sect;
-    
+
     $self->_caseify(\$sect);
 
     if (! exists $self->{sCMT}{$sect}) {
@@ -1705,9 +2093,9 @@ sub DeleteSectionComment
 {
     my $self = shift;
     my $sect = shift;
-    
+
     return undef if not defined $sect;
-    
+
     $self->_caseify(\$sect);
     $self->_touch_section($sect);
 
@@ -1865,7 +2253,7 @@ sub SetParameterEOT
 =head2 DeleteParameterEOT ($section, $parmeter)
 
 Removes the EOT marker for the given section and parameter.
-When writing a configuration file, if no EOT marker is defined 
+When writing a configuration file, if no EOT marker is defined
 then "EOT" is used.
 
 =cut
@@ -1873,12 +2261,12 @@ then "EOT" is used.
 sub DeleteParameterEOT
 {
     my ($self, $sect, $parm) = @_;
-    
+
     if (not (defined($sect) && defined($parm)))
     {
         return undef;
     }
-    
+
     $self->_caseify(\$sect, \$parm);
 
     $self->_touch_parameter($sect, $parm);
@@ -1889,8 +2277,8 @@ sub DeleteParameterEOT
 
 =head2 SetParameterTrailingComment ($section, $parameter, $cmt)
 
-Set the end trailing comment for the given section and parameter. 
-If there is a old comment for the parameter, it will be 
+Set the end trailing comment for the given section and parameter.
+If there is a old comment for the parameter, it will be
 overwritten by the new one.
 
 If there is a new parameter trailing comment to be added, the
@@ -1920,9 +2308,9 @@ sub SetParameterTrailingComment
 
 =head2 GetParameterTrailingComment ($section, $parameter)
 
-An accessor method to read the trailing comment after the parameter. 
-The trailing comment will be returned if there is one. A null string 
-will be returned if the parameter exists but no comment for it. 
+An accessor method to read the trailing comment after the parameter.
+The trailing comment will be returned if there is one. A null string
+will be returned if the parameter exists but no comment for it.
 otherwise, L<undef> will be returned.
 
 =cut
@@ -1966,25 +2354,25 @@ sub Delete {
 =head2 tie %ini, 'Config::IniFiles', (-file=>$filename, [-option=>value ...] )
 
 Using C<tie>, you can tie a hash to a B<Config::IniFiles> object. This creates a new
-object which you can access through your hash, so you use this instead of the 
-B<new> method. This actually creates a hash of hashes to access the values in 
-the INI file. The options you provide through C<tie> are the same as given for 
+object which you can access through your hash, so you use this instead of the
+B<new> method. This actually creates a hash of hashes to access the values in
+the INI file. The options you provide through C<tie> are the same as given for
 the B<new> method, above.
 
 Here's an example:
 
   use Config::IniFiles;
-  
+
   my %ini
   tie %ini, 'Config::IniFiles', ( -file => "/path/configfile.ini" );
 
   print "We have $ini{Section}{Parameter}." if $ini{Section}{Parameter};
 
-Accessing and using the hash works just like accessing a regular hash and 
+Accessing and using the hash works just like accessing a regular hash and
 many of the object methods are made available through the hash interface.
 
-For those methods that do not coincide with the hash paradigm, you can use 
-the Perl C<tied> function to get at the underlying object tied to the hash 
+For those methods that do not coincide with the hash paradigm, you can use
+the Perl C<tied> function to get at the underlying object tied to the hash
 and call methods on that object. For example, to write the hash out to a new
 ini file, you would do something like this:
 
@@ -1993,29 +2381,29 @@ ini file, you would do something like this:
 
 =head2 $val = $ini{$section}{$parameter}
 
-Returns the value of $parameter in $section. 
+Returns the value of $parameter in $section.
 
-Multiline values accessed through a hash will be returned 
+Multiline values accessed through a hash will be returned
 as a list in list context and a concatenated value in scalar
 context.
 
 =head2 $ini{$section}{$parameter} = $value;
 
-Sets the value of C<$parameter> in C<$section> to C<$value>. 
+Sets the value of C<$parameter> in C<$section> to C<$value>.
 
-To set a multiline or multiv-alue parameter just assign an 
+To set a multiline or multiv-alue parameter just assign an
 array reference to the hash entry, like this:
 
  $ini{$section}{$parameter} = [$value1, $value2, ...];
 
-If the parameter did not exist in the original file, it will 
-be created. However, Perl does not seem to extend autovivification 
+If the parameter did not exist in the original file, it will
+be created. However, Perl does not seem to extend autovivification
 to tied hashes. That means that if you try to say
 
   $ini{new_section}{new_paramters} = $val;
 
-and the section 'new_section' does not exist, then Perl won't 
-properly create it. In order to work around this you will need 
+and the section 'new_section' does not exist, then Perl won't
+properly create it. In order to work around this you will need
 to create a hash reference in that section and then assign the
 parameter value. Something like this should do nicely:
 
@@ -2024,20 +2412,20 @@ parameter value. Something like this should do nicely:
 
 =head2 %hash = %{$ini{$section}}
 
-Using the tie interface, you can copy whole sections of the 
-ini file into another hash. Note that this makes a copy of 
-the entire section. The new hash in no longer tied to the 
-ini file, In particular, this means -default and -nocase 
+Using the tie interface, you can copy whole sections of the
+ini file into another hash. Note that this makes a copy of
+the entire section. The new hash in no longer tied to the
+ini file, In particular, this means -default and -nocase
 settings will not apply to C<%hash>.
 
 
 =head2 $ini{$section} = {}; %{$ini{$section}} = %parameters;
 
-Through the hash interface, you have the ability to replace 
+Through the hash interface, you have the ability to replace
 the entire section with a new set of parameters. This call
-will fail, however, if the argument passed in NOT a hash 
-reference. You must use both lines, as shown above so that 
-Perl recognizes the section as a hash reference context 
+will fail, however, if the argument passed in NOT a hash
+reference. You must use both lines, as shown above so that
+Perl recognizes the section as a hash reference context
 before COPYing over the values from your C<%parameters> hash.
 
 =head2 delete $ini{$section}{$parameter}
@@ -2047,12 +2435,12 @@ to completely remove a parameter from a section.
 
 =head2 delete $ini{$section}
 
-The tied interface also allows you to delete an entire 
+The tied interface also allows you to delete an entire
 section from the ini file using the Perl C<delete> function.
 
 =head2 %ini = ();
 
-If you really want to delete B<all> the items in the ini file, this 
+If you really want to delete B<all> the items in the ini file, this
 will do it. Of course, the changes won't be written to the actual
 file unless you call B<RewriteConfig> on the object tied to the hash.
 
@@ -2068,16 +2456,16 @@ file unless you call B<RewriteConfig> on the object tied to the hash.
 
 =back
 
-When tied to a hash, you use the Perl C<keys> and C<each> 
-functions to iteratively list the parameters (C<keys>) or 
+When tied to a hash, you use the Perl C<keys> and C<each>
+functions to iteratively list the parameters (C<keys>) or
 parameters and their values (C<each>) in a given section.
 
-You can also use the Perl C<exists> function to see if a 
+You can also use the Perl C<exists> function to see if a
 parameter is defined in a given section.
 
-Note that none of these will return parameter names that 
+Note that none of these will return parameter names that
 are part of the default section (if set), although accessing
-an unknown parameter in the specified section will return a 
+an unknown parameter in the specified section will return a
 value from the default section if there is one.
 
 
@@ -2093,10 +2481,10 @@ value from the default section if there is one.
 
 =back
 
-When tied to a hash, you use the Perl C<keys> and C<each> 
+When tied to a hash, you use the Perl C<keys> and C<each>
 functions to iteratively list the sections in the ini file.
 
-You can also use the Perl C<exists> function to see if a 
+You can also use the Perl C<exists> function to see if a
 section is defined in the file.
 
 =cut
@@ -2106,12 +2494,12 @@ section is defined in the file.
 # TIEHASH Methods
 #
 # Description:
-# These methods allow you to tie a hash to the 
-# Config::IniFiles object. Note that, when tied, the 
-# user wants to look at thinks like $ini{sec}{parm}, but the 
-# TIEHASH only provides one level of hash interace, so the 
-# root object gets asked for a $ini{sec}, which this 
-# implements. To further tie the {parm} hash, the internal 
+# These methods allow you to tie a hash to the
+# Config::IniFiles object. Note that, when tied, the
+# user wants to look at thinks like $ini{sec}{parm}, but the
+# TIEHASH only provides one level of hash interace, so the
+# root object gets asked for a $ini{sec}, which this
+# implements. To further tie the {parm} hash, the internal
 # class Config::IniFiles::_section, is provided, below.
 #
 ############################################################
@@ -2224,7 +2612,7 @@ sub NEXTKEY {
   my( $last ) = @_;
 
   my $i=$self->{tied_enumerator}++;
-  my $key=$self->{sects}[$i]; 
+  my $key=$self->{sects}[$i];
   return if (! defined $key);
   return wantarray ? ($key, $self->FETCH($key)) : $key;
 } # end NEXTKEY
@@ -2261,9 +2649,9 @@ sub DESTROY {
 # Args: $thing
 #   $thing  An input source
 #
-# Description: Takes an input source of a filehandle, 
+# Description: Takes an input source of a filehandle,
 # filehandle glob, reference to a filehandle glob, IO::File
-# object or scalar filename and returns a file handle to 
+# object or scalar filename and returns a file handle to
 # read from it with.
 # ----------------------------------------------------------
 # Date      Modification                              Author
@@ -2277,7 +2665,7 @@ sub _make_filehandle {
   # This code is 'borrowed' from Lincoln D. Stein's GD.pm module
   # with modification for this module. Thanks Lincoln!
   #
-  
+
   no strict 'refs';
   my $thing = shift;
 
@@ -2292,15 +2680,15 @@ sub _make_filehandle {
   }
 
   return $thing if defined(fileno $thing);
-  
+
   # otherwise try qualifying it into caller's package
   my $fh = qualify_to_ref($thing,caller(1));
   return $fh if defined(fileno $fh);
-  
+
   # otherwise treat it as a file to open
   $fh = gensym;
   open($fh,$thing) || return;
-  
+
   return $fh;
 } # end _make_filehandle
 
@@ -2310,13 +2698,13 @@ sub _make_filehandle {
 #
 # Description:
 # This package is used to provide a single-level TIEHASH
-# interface to the sections in the IniFile. When tied, the 
-# user wants to look at thinks like $ini{sec}{parm}, but the 
-# TIEHASH only provides one level of hash interace, so the 
-# root object gets asked for a $ini{sec} and must return a 
+# interface to the sections in the IniFile. When tied, the
+# user wants to look at thinks like $ini{sec}{parm}, but the
+# TIEHASH only provides one level of hash interace, so the
+# root object gets asked for a $ini{sec} and must return a
 # has reference that accurately covers the '{parm}' part.
 #
-# This package is only used when tied and is inter-woven 
+# This package is only used when tied and is inter-woven
 # between the sections and their parameters when the TIEHASH
 # method is called by Perl. It's a very simple implementation
 # of a tied hash object that simply maps onto the object API.
@@ -2665,34 +3053,36 @@ data structure.
 
 The original code was written by Scott Hutton.
 Then handled for a time by Rich Bowen (thanks!),
-It is now managed by Jeremy Wadsack,
+and was later managed by Jeremy Wadsack (thanks!),
+and now is managed by Shlomi Fish ( L<http://www.shlomifish.org/> )
 with many contributions from various other people.
 
 In particular, special thanks go to (in roughly chronological order):
 
 Bernie Cosell, Alan Young, Alex Satrapa, Mike Blazer, Wilbert van de Pieterman,
 Steve Campbell, Robert Konigsberg, Scott Dellinger, R. Bernstein,
-Daniel Winkelmann, Pires Claudio, Adrian Phillips, 
-Marek Rouchal, Luc St Louis, Adam Fischler, Kay Röpke, Matt Wilson, 
+Daniel Winkelmann, Pires Claudio, Adrian Phillips,
+Marek Rouchal, Luc St Louis, Adam Fischler, Kay Röpke, Matt Wilson,
 Raviraj Murdeshwar and Slaven Rezic, Florian Pfaff
 
 Geez, that's a lot of people. And apologies to the folks who were missed.
 
 If you want someone to bug about this, that would be:
 
-    Jeremy Wadsack <dgsupport at wadsack-allen dot com>
+    Shlomi Fish <shlomif@cpan.org>
 
 If you want more information, or want to participate, go to:
 
-    http://sourceforge.net/projects/config-inifiles/
+L<http://sourceforge.net/projects/config-inifiles/>
 
-Please send bug reports to config-inifiles-bugs@lists.sourceforge.net
+Please submit bug reports using the Request Tracker interface at
+L<https://rt.cpan.org/Public/Dist/Display.html?Name=Config-IniFiles> .
 
 Development discussion occurs on the mailing list
 config-inifiles-dev@lists.sourceforge.net, which you can subscribe
 to by going to the project web site (link above).
 
-This program is free software; you can redistribute it and/or 
+This program is free software; you can redistribute it and/or
 modify it under the same terms as Perl itself.
 
 =cut
