@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = '2.73';
+$VERSION = '2.74';
 
 require 5.004;
 use strict;
@@ -1682,6 +1682,16 @@ sub _write_config_to_filename
             "temp.ini-XXXXXXXXXX",
             DIR => dirname($filename)
         );
+
+        # Convert the filehandle to a "text" filehandle suitable for use
+        # on Windows (and other platforms).
+        # 
+        # This may break compatibility for ultra-old perls (ones before 5.6.0)
+        # so I say - Good Riddance!
+        if ($^O =~ m/\AMSWin/)
+        {
+            binmode $fh, ':crlf';
+        }
     };
 
     if ($@)
