@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = '2.74';
+$VERSION = '2.75';
 
 require 5.004;
 use strict;
@@ -19,6 +19,8 @@ use File::Temp qw/ tempfile /;
 @Config::IniFiles::errors = ( );
 
 #   $Header: /home/shlomi/progs/perl/cpan/Config/IniFiles/config-inifiles-cvsbackup/config-inifiles/IniFiles.pm,v 2.41 2003-12-08 10:50:56 domq Exp $
+
+=encoding utf8
 
 =head1 NAME
 

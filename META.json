@@ -4,7 +4,7 @@
       "Shlomi Fish <shlomif@cpan.org>"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "Module::Build version 0.38, CPAN::Meta::Converter version 2.120630",
+   "generated_by" : "Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630",
    "keywords" : [
       "ini",
       "files",
@@ -57,7 +57,7 @@
    "provides" : {
       "Config::IniFiles" : {
          "file" : "lib/Config/IniFiles.pm",
-         "version" : "2.74"
+         "version" : "2.75"
       }
    },
    "release_status" : "stable",
@@ -70,5 +70,5 @@
          "url" : "https://bitbucket.org/shlomif/perl-config-inifiles"
       }
    },
-   "version" : "2.74"
+   "version" : "2.75"
 }

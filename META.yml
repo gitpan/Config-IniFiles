@@ -13,7 +13,7 @@ build_requires:
 configure_requires:
   Module::Build: 0.36
 dynamic_config: 1
-generated_by: 'Module::Build version 0.38, CPAN::Meta::Converter version 2.120630'
+generated_by: 'Module::Build version 0.3901, CPAN::Meta::Converter version 2.120630'
 keywords:
   - ini
   - files
@@ -32,7 +32,7 @@ name: Config-IniFiles
 provides:
   Config::IniFiles:
     file: lib/Config/IniFiles.pm
-    version: 2.74
+    version: 2.75
 requires:
   Carp: 0
   Fcntl: 0
@@ -46,4 +46,4 @@ resources:
   homepage: https://sourceforge.net/projects/config-inifiles/
   license: http://dev.perl.org/licenses/
   repository: https://bitbucket.org/shlomif/perl-config-inifiles
-version: 2.74
+version: 2.75
