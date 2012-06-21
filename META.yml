@@ -32,13 +32,13 @@ name: Config-IniFiles
 provides:
   Config::IniFiles:
     file: lib/Config/IniFiles.pm
-    version: 2.76
+    version: 2.77
 requires:
   Carp: 0
   Fcntl: 0
   File::Basename: 0
   File::Temp: 0
-  List::MoreUtils: 0
+  List::MoreUtils: 0.33
   Symbol: 0
   strict: 0
   warnings: 0
@@ -46,4 +46,4 @@ resources:
   homepage: https://sourceforge.net/projects/config-inifiles/
   license: http://dev.perl.org/licenses/
   repository: https://bitbucket.org/shlomif/perl-config-inifiles
-version: 2.76
+version: 2.77

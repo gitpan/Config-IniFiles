@@ -47,7 +47,7 @@
             "Fcntl" : "0",
             "File::Basename" : "0",
             "File::Temp" : "0",
-            "List::MoreUtils" : "0",
+            "List::MoreUtils" : "0.33",
             "Symbol" : "0",
             "strict" : "0",
             "warnings" : "0"
@@ -57,7 +57,7 @@
    "provides" : {
       "Config::IniFiles" : {
          "file" : "lib/Config/IniFiles.pm",
-         "version" : "2.76"
+         "version" : "2.77"
       }
    },
    "release_status" : "stable",
@@ -70,5 +70,5 @@
          "url" : "https://bitbucket.org/shlomif/perl-config-inifiles"
       }
    },
-   "version" : "2.76"
+   "version" : "2.77"
 }
