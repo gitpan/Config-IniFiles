@@ -2,7 +2,7 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = '2.77';
+$VERSION = '2.78';
 
 require 5.004;
 use strict;
@@ -825,7 +825,9 @@ sub _no_filename
 {
     my $self = shift;
 
-    return not length $self->{cf};
+    my $fn = $self->{cf};
+
+    return (not (defined($fn) && length($fn)));
 }
 
 sub _read_line_num
@@ -2390,7 +2392,7 @@ Here's an example:
 
   use Config::IniFiles;
 
-  my %ini
+  my %ini;
   tie %ini, 'Config::IniFiles', ( -file => "/path/configfile.ini" );
 
   print "We have $ini{Section}{Parameter}." if $ini{Section}{Parameter};
