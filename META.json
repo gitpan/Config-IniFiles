@@ -57,7 +57,7 @@
    "provides" : {
       "Config::IniFiles" : {
          "file" : "lib/Config/IniFiles.pm",
-         "version" : "2.78"
+         "version" : "2.79"
       }
    },
    "release_status" : "stable",
@@ -70,5 +70,5 @@
          "url" : "https://bitbucket.org/shlomif/perl-config-inifiles"
       }
    },
-   "version" : "2.78"
+   "version" : "2.79"
 }
