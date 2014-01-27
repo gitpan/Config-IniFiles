@@ -2,9 +2,9 @@ package Config::IniFiles;
 
 use vars qw($VERSION);
 
-$VERSION = '2.82';
+$VERSION = '2.83';
 
-require 5.004;
+require 5.008;
 use strict;
 use warnings;
 use Carp;
@@ -3166,8 +3166,13 @@ Development discussion occurs on the mailing list
 config-inifiles-dev@lists.sourceforge.net, which you can subscribe
 to by going to the project web site (link above).
 
-This program is free software; you can redistribute it and/or
-modify it under the same terms as Perl itself.
+=head1 LICENSE
+
+This software is copyright (c) 2000 by Scott Hutton and the rest of the
+Config::IniFiles contributors.
+
+This is free software; you can redistribute it and/or modify it under
+the same terms as the Perl 5 programming language system itself.
 
 =cut
 
